@@ -53,9 +53,13 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
     logger.exception("Unhandled exception on %s", request.url)
     return JSONResponse(
         status_code=500,
-        content={"error": "internal_server_error", "message": str(exc)},
+        content={
+            "detail": {
+                "error": "internal_server_error",
+                "message": "An unexpected server error occurred",
+            }
+        },
     )
-
 # ---------------------------------------------------------------------------
 # Health check — FR-API-1
 # ---------------------------------------------------------------------------
