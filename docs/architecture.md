@@ -1,32 +1,11 @@
 # Architecture
 
-## Chosen stack
-Fill this only after reading the case study.
+The authoritative architecture specifications for Vortex SICM are documented under [`docs/architecture/`](architecture/):
 
-- Frontend:
-- Backend:
-- Database:
-- AI/ML:
-- Deployment:
-
-## Architecture notes
-
-```text
-User
-  |
-  v
-Frontend
-  |
-  v
-Backend/API
-  |
-  +--> Database
-  |
-  +--> AI/ML/API services
-```
-
-Replace this diagram with the actual architecture when known.
-
-## Key decisions
-- Keep the architecture as small as possible.
-- Document why each major technology was selected.
+- [`architecture.md`](architecture/architecture.md) — System architecture and component boundaries
+- [`data-model.md`](architecture/data-model.md) — Shared Pydantic domain models and schemas
+- [`domain-model.md`](architecture/domain-model.md) — Core business domain entities
+- [`simulation-design.md`](architecture/simulation-design.md) — Time-step simulation engine design
+- [`optimization-design.md`](architecture/optimization-design.md) — Exhaustive enumeration optimizer & objective
+- [`api-contract.md`](architecture/api-contract.md) — Binding FastAPI request/response contracts
+- [`TRD.md`](architecture/TRD.md) — Technical Requirements Document

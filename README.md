@@ -108,7 +108,9 @@ Vortex_SICM/
 │       ├── scenario.py             # Scenario generation API
 │       ├── forecast.py             # Forecast API
 │       ├── simulation.py           # Simulation/what-if APIs
-│       └── optimization.py         # Optimization API
+│       ├── optimization.py         # Optimization API
+│       ├── explanation.py          # Recommendation explanation API
+│       └── validation.py           # Centralized API contract validation
 ├── data/
 │   ├── generator.py               # Synthetic data
 │   └── scenarios.py               # Normal / Peak / Surge scenarios
@@ -131,6 +133,7 @@ Vortex_SICM/
 | POST | `/api/simulate` | Simulate an allocation |
 | POST | `/api/optimize` | Find the best feasible allocation |
 | POST | `/api/whatif` | Evaluate a manually selected allocation |
+| POST | `/api/explain` | Authoritative deterministic recommendation explanation |
 
 The binding API contract is documented in [`docs/architecture/api-contract.md`](docs/architecture/api-contract.md).
 
