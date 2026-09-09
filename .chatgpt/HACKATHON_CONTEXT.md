@@ -1,6 +1,6 @@
 # AAVISHKARA-26 — ChatGPT Orchestration State
 
-> **ChatGPT-only state.** This file is for orchestration across conversations, not coding instructions. Coding agents must follow the user's task, `AGENTS.md`, project docs, and existing code.
+> **ChatGPT-only state.** This file is for orchestration across conversations, not coding instructions. Coding agents must follow the user's task, official event rules/problem statement, `AGENTS.md`, `AI_INSTRUCTIONS.md`, project docs, and existing code.
 
 ## 1. Event constraints
 - Hackathon: AAVISHKARA-26.
@@ -35,6 +35,8 @@ Hard requirements to preserve:
 ## 4. Product decision
 Working concept: **bank branch operations decision-support dashboard**.
 Primary user: branch operations manager.
+
+Purpose: forecast synthetic customer demand, simulate multiple queues, evaluate limited staffing, compare basic and optimized feasible allocations, explain the recommendation, and support what-if analysis.
 
 Demo story:
 1. Show current branch state.
@@ -88,19 +90,44 @@ The product is **not** merely a queue simulator and not an autonomous agent.
 ## 7. Repository
 Repo: `Kiran-official/Vortex_SICM`, default branch `main`.
 
-Current structure includes `.chatgpt/`, `ai/`, `assets/`, `backend/`, `data/`, `database/`, `docs/`, `frontend/`, `infra/`, `scripts/`, `tests/`, `AI_INSTRUCTIONS.md`, `AGENTS.md`, and `README.md`.
+Current repository contains the shared planning pack plus a foundation implementation covering data generation, domain models, forecasting, simulation, optimization, FastAPI routes, and tests. The frontend remains the major product-surface dependency.
 
-Planning baseline was a universal hackathon boilerplate; no application implementation had been started at that point.
+## 8. Agent/instruction state
+- `AGENTS.md`: repository coding-agent policy, competition timing/new-project restrictions, AI/human responsibility, engineering rules, P0 scope, testing, integration, and handoff requirements.
+- `AI_INSTRUCTIONS.md`: AI coding-assistant-specific behavior, competition guardrails, AI disclosure/human validation requirements, deterministic-core rules, testing, and change discipline.
+- `docs/engineering-rules.md`: team workflow, competition integrity, product engineering, and coordination rules.
+- `docs/README.md`: documentation map, authority model, and AI instruction boundary.
+- `.chatgpt/HACKATHON_CONTEXT.md`: orchestration state only; not coding guidance.
 
-## 8. Agentic instruction state
-- `AGENTS.md`: strengthened with instruction priority, project constraints, agent boundary, pre-edit inspection, engineering rules, test requirements, integration discipline, and hackathon integrity.
-- `AI_INSTRUCTIONS.md`: aligned with the same constraints, including deterministic core logic, explainability, metric discipline, focused testing, and stale-context protection.
-- `.chatgpt/HACKATHON_CONTEXT.md`: this orchestration snapshot; **not** coding guidance.
+## 9. Current implementation state
+- Planning specification pack: synced to `main`.
+- Foundation implementation: present on `main`.
+- Optimization implementation present: `backend/optimization/baseline.py`, `optimizer.py`, `explain.py`.
+- Optimization tests present: `tests/test_optimization.py`.
+- Simulation implementation present: `backend/simulation/engine.py`.
+- API implementation present: `backend/main.py` and `backend/routes/`.
+- Frontend implementation state must be checked before planning frontend-dependent work.
+- Local execution/test status has **not** been independently verified in this ChatGPT session; do not claim the current suite passes.
 
-## 9. Synchronization protocol — important
-The repository is the source of truth for implementation state. The context file is the source of truth for ChatGPT's cross-conversation orchestration state.
+## 10. Immediate Kiran task
+**KIRAN-001 — Enumeration sizing benchmark + scoring validation.**
 
-**Before every substantive response/action in this project, ChatGPT should re-check the current repository state when repository changes may have occurred.** Do not rely on an old snapshot of code or file contents.
+Kiran should:
+1. Pull/re-read current `main`.
+2. Run existing optimization tests.
+3. Benchmark real normal/peak/surge scenarios.
+4. Measure feasible allocation count, simulation runtime, optimizer runtime, baseline/optimized metrics, and constraint compliance.
+5. Verify deterministic output.
+6. Confirm the documented `<3 second` optimization target for intended MVP sizing.
+7. Update ADR-004 with actual measurements.
+8. Fix concrete defects discovered by tests/benchmark only.
+
+Do not fabricate or cherry-pick favorable metrics. If execution is unavailable, record that verification was not performed.
+
+## 11. Synchronization protocol
+The repository is the source of truth for implementation state. This file is the source of truth for ChatGPT's cross-conversation orchestration state.
+
+Before every substantive project response/action, re-check current repository state when repository changes may have occurred. Do not rely on an old snapshot of code or file contents.
 
 When another team member/agent makes changes:
 1. Inspect current `main` state and recent commits/diffs.
@@ -110,13 +137,7 @@ When another team member/agent makes changes:
 
 This synchronization cannot be triggered invisibly by GitHub changes between messages. If a change happens outside the current interaction, the next project interaction must begin with a repository re-sync; never assume the previous context is still current.
 
-## 10. Current implementation state
-- Application code: **not yet started** at the planning snapshot.
-- Agent/instruction hardening: complete.
-- Latest verified repository state before this context update: commit `b7dfb34f08885a6c857227c472cb92bb56a4b781` (`AI_INSTRUCTIONS.md` alignment).
-- Next step: inspect current docs/boilerplate, lock the minimal architecture/contracts, then build the smallest end-to-end P0 vertical slice.
-
-## 11. Decision discipline
+## 12. Decision discipline
 For every feature, ask:
 - Does it directly improve the JP-012 judging outcome?
 - Is it necessary for the P0 demo path?
