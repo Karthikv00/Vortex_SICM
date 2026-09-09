@@ -19,7 +19,8 @@ Use task IDs in commits and Slack `[CHANGE]` posts. Ownership is a starting resp
 - **REETHU-001:** Test scaffolding and first generator tests; `tests/test_reethu_001_generator.py`. *(Completed & merged — PR #6)*
 - **REETHU-002:** Edge-case and scenario validation suite; `tests/test_reethu_002_*.py`. *(Completed & merged — PR #15)*
 - **REETHU-003:** Demo scenario realism and validation; `tests/test_reethu_003_demo_scenarios.py`. *(Completed & merged — PR #11, #14)*
-- **REETHU-004:** Ongoing documentation/code drift monitoring. **ACTIVE TASK.**
+- **REETHU-004:** Ongoing documentation/code drift monitoring. *(Completed & merged — PR #17)*
+- **REETHU-P8:** Pre-demo end-to-end integration and quality validation; `tests/test_reethu_p8_integration.py`, `docs/testing/validation-checklist.md`. *(Completed — PR ready)*
 
 ## Deepansha
 - **DEEPANSHA-001:** Dashboard shell + mock API layer; all 9 sections; `frontend/`. *(In progress / active branch)*
@@ -27,9 +28,9 @@ Use task IDs in commits and Slack `[CHANGE]` posts. Ownership is a starting resp
 - **DEEPANSHA-003:** Real API integration + demo polish.
 
 ## Current coordination state
-All backend foundation, simulation, optimization, forecasting, API routes, and comprehensive test suites (193 tests passing) are completed and integrated on `main`.
+All backend foundation, simulation, optimization, forecasting, API routes, decision pipeline, and comprehensive test suites (231 tests passing) are completed and validated.
 
 **Current priorities:**
 1. Deepansha completing dashboard sections and real API integration (`DEEPANSHA-001` / `DEEPANSHA-002`).
-2. Reethu monitoring documentation/code drift (`REETHU-004`) and preparing validation checklist for pre-demo freeze.
+2. Reethu finalizing Phase P8 integration validation and pre-demo checklist sign-off.
 
