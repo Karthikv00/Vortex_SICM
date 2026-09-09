@@ -15,7 +15,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.routes import explanation, forecast, optimization, scenario, simulation
+from backend.routes import custom_workload, explanation, forecast, optimization, scenario, simulation
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -60,6 +60,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
             }
         },
     )
+
 # ---------------------------------------------------------------------------
 # Health check — FR-API-1
 # ---------------------------------------------------------------------------
@@ -76,6 +77,7 @@ app.include_router(forecast.router, prefix="/api", tags=["Forecast"])
 app.include_router(simulation.router, prefix="/api", tags=["Simulation"])
 app.include_router(optimization.router, prefix="/api", tags=["Optimization"])
 app.include_router(explanation.router, prefix="/api", tags=["Explanation"])
+app.include_router(custom_workload.router, prefix="/api", tags=["Custom Workload"])
 
 
 # ---------------------------------------------------------------------------
