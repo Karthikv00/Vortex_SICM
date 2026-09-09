@@ -27,9 +27,7 @@ P0 requires multiple queues, Normal/Peak/Surge, forecast, waiting metrics, const
 ## 4. Repository
 Repo: `Kiran-official/Vortex_SICM`; default branch: `main`.
 
-Latest main integration commit after the current docs-sync branch is based on: `6a18af086733636f410539a72b2ba8ea4fb65a46`.
-
-The repository contains the planning pack, backend implementation, tests, and active frontend work.
+Latest known project-state synchronization is recorded in `docs/execution/project-status.md`; PR #21 merged that synchronization as `ad87af1`.
 
 ## 5. Completed work
 - PR #1 — shared planning/specification pack synced to GitHub.
@@ -50,6 +48,7 @@ The repository contains the planning pack, backend implementation, tests, and ac
 - PR #18 — KARTHI-005 safe FastAPI error handling.
 - PR #19 — REETHU-P8 pre-demo end-to-end integration validation and checklist.
 - PR #20 — KIRAN-003 API + DecisionPipeline integration hardening.
+- PR #21 — final documentation/project-state synchronization; documentation-only, no application behavior changes.
 
 PR #12 was an earlier explanation-weight alignment attempt that was not merged; the intended change was completed through PR #14.
 
@@ -81,14 +80,14 @@ All implementation tasks KARTHI-001..006 are complete. Integration/performance s
 KIRAN-001..004 are complete. Current role is integration support and API/decision-layer hardening only. Do not alter algorithms without evidence/team review.
 
 ### Reethu
-REETHU-001..004 and P8 are complete. Current role is final integrated QA/release gate: dashboard validation, full regression, clean clone, demo rehearsal, metric traceability, and blocker classification.
+REETHU-001..004 and P8 are complete. Current role is final integrated QA/release gate. The current discrete QA assignment is **REETHU-005 — Final QA + Acceptance Validation**.
 
 ### Deepansha
 Dashboard work is the remaining primary implementation path. DEEPANSHA-003 is real FastAPI → dashboard integration and demo polish. No mock data in final/demo path.
 
 ## 8. Current remaining work
 1. Deepansha: connect scenario controls to the real API; display real forecast, baseline/optimized metrics, overload/backlog/utilization, improvement, explanation/recommendation, and supported what-if; implement loading/error/empty/retry states.
-2. Reethu: validate the integrated dashboard, rerun full tests, clean-clone setup, rehearse demo, and sign off release readiness.
+2. Reethu: validate the integrated dashboard, rerun full tests, clean-clone setup, rehearse demo, metric traceability, blocker classification, and release sign-off.
 3. Kiran/Karthi: support integration blockers only; avoid new backend features.
 
 ## 9. Demo
@@ -97,10 +96,13 @@ Intended story:
 
 Existing real validation evidence includes 14.1% Normal wait reduction, 48.7% Peak wait reduction, and verified Surge capacity-expansion relief. Never hard-code or manually manufacture these or any other KPI.
 
-## 10. Synchronization protocol
+## 10. Current release gates
+Automated backend/API validation is green, but final release readiness is not yet signed off. Remaining gates are browser/dashboard integration, browser console cleanliness, manual loading/empty/error-state verification, clean-clone setup/test/demo validation, at least two demo rehearsals, final-version freeze, and confirmation of organizer-specific requirements from authoritative event rules.
+
+## 11. Synchronization protocol
 The repository is the implementation source of truth. Before substantive project actions, inspect current `main` and recent PRs when changes may have occurred. Update this file and relevant docs when project state changes. Do not assume old conversation context overrides GitHub state.
 
 For task handoffs use: STARTED → READY FOR REVIEW → BLOCKED → INTEGRATION READY → DONE.
 
-## 11. Decision discipline
+## 12. Decision discipline
 Prefer the smallest complete, reproducible, explainable P0 system. Every change must preserve contracts, deterministic behavior, real measured evidence, and team ownership/compliance.
