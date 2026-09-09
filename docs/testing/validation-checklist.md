@@ -21,16 +21,28 @@
 - [x] Explanation output is traceable to computed metrics and allocation changes.
 - [x] What-if behavior is validated through genuine backend calculations; P8 reported `<1.5 s` SLA compliance.
 
+## Dashboard integration evidence
+- [x] Deepansha Vite production build passed: **48 modules transformed**.
+- [x] Real HTTP flows verified through Vite proxy + FastAPI for health, scenario generation, forecast, simulate, optimize, and what-if.
+- [x] Normal / Peak / Surge live API flows verified.
+- [x] Invalid scenario, unknown queue, and over-capacity staff inputs returned structured **422** responses.
+- [x] Backend-unavailable behavior surfaced through the dashboard `ErrorState`.
+- [x] Custom API integration verification passed.
+- [ ] Final dashboard integration PR reviewed and merged into `main`.
+
 ## Dashboard/rehearsal release gate
 - [ ] No frontend console errors during the full real-backend demo.
-- [ ] Loading/empty/error states manually verified in the browser.
+- [ ] Loading/empty/error/retry states manually verified in the browser.
 - [ ] All final dashboard data paths use live FastAPI responses; no mock data remains in the demo path.
 - [ ] Scenario selector works for Normal / Peak / Surge against the real backend.
 - [ ] Dashboard shows forecast, baseline vs optimized results, waiting/overload/backlog/utilization metrics, improvement, recommendation/explanation, and supported what-if results.
-- [ ] Frontend-visible metrics are cross-checked against actual backend responses.
+- [ ] Frontend-visible metrics are cross-checked against actual backend responses during the final browser run.
 - [ ] Full demo rehearsed at least twice, preferably by two different people.
 - [ ] Clean-clone setup and demo path verified.
 - [ ] Backup demo path prepared only if permitted by the official event rules.
+
+## Tooling limitation
+Playwright browser automation was attempted for the integrated dashboard, but the external browser-download CDN returned **404**. This is a tooling limitation rather than a confirmed application failure. Manual browser verification remains mandatory.
 
 ## Release/compliance gate
 - [x] Synthetic data only.
@@ -41,4 +53,4 @@
 - [ ] Official event-specific submission/presentation requirements have been checked against the authoritative organizer rules.
 
 ## Current release status
-Backend/API automated validation is complete and green. The final release gate remains **OPEN** until the dashboard is fully integrated and the browser, clean-clone, and rehearsal checks above are actually verified. Do not claim final QA sign-off before those checks are evidenced.
+Backend/API automated validation is complete and green. Deepansha's real dashboard/API implementation is ready for PR/review on `DEEPANSHA-001-dashboard`. The final release gate remains **OPEN** until merge, manual browser validation, clean-clone validation, and rehearsal are evidenced.
