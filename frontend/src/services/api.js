@@ -1,6 +1,6 @@
 /**
  * frontend/src/services/api.js
- * 
+ *
  * Production API service conforming to docs/architecture/api-contract.md.
  * Automatically falls back to high-fidelity deterministic mock data if FastAPI
  * backend is offline or in demo mode.
@@ -20,9 +20,7 @@ export function isRealApiPreferred() {
   return preferRealApi;
 }
 
-/**
- * Health check — FR-API-1
- */
+/** Health check — FR-API-1 */
 export async function checkHealth() {
   try {
     const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(1500) });
@@ -36,17 +34,12 @@ export async function checkHealth() {
   return { online: false, status: 'offline' };
 }
 
-/**
 async function parseErrorResponse(res, defaultMsg) {
   try {
     const err = await res.json();
     if (err.detail) {
-      if (typeof err.detail === 'object' && err.detail.message) {
-        return err.detail.message;
-      }
-      if (typeof err.detail === 'string') {
-        return err.detail;
-      }
+      if (typeof err.detail === 'object' && err.detail.message) return err.detail.message;
+      if (typeof err.detail === 'string') return err.detail;
       if (Array.isArray(err.detail) && err.detail[0]?.msg) {
         return err.detail.map(d => `${d.loc ? d.loc.join('.') + ': ' : ''}${d.msg}`).join(', ');
       }
@@ -58,9 +51,7 @@ async function parseErrorResponse(res, defaultMsg) {
   return `${defaultMsg} (HTTP ${res.status})`;
 }
 
-/**
- * Load or generate scenario configuration along with canonical baseline
- */
+/** Load or generate scenario configuration along with canonical baseline */
 export async function getScenario(scenarioName = 'surge', seed = 42) {
   if (preferRealApi) {
     let res;
@@ -74,19 +65,12 @@ export async function getScenario(scenarioName = 'surge', seed = 42) {
       throw new Error(`Unable to connect to FastAPI backend at ${API_BASE}/scenario/generate. Please ensure the backend server is running on port 8000.`);
     }
 
-    if (!res.ok) {
-      const msg = await parseErrorResponse(res, 'Scenario generation failed');
-      throw new Error(msg);
-    }
+    if (!res.ok) throw new Error(await parseErrorResponse(res, 'Scenario generation failed'));
     const data = await res.json();
-    return {
-      scenario: data.scenario || data,
-      baseline: data.baseline || null
-    };
+    return { scenario: data.scenario || data, baseline: data.baseline || null };
   }
 
-  // Deterministic Mock (only used if explicitly in mock mode)
-  await new Promise(r => setTimeout(r, 120)); // Subtle realistic latency
+  await new Promise(r => setTimeout(r, 120));
   const sc = SCENARIOS[scenarioName] || SCENARIOS.surge;
   return {
     scenario: {
@@ -102,113 +86,127 @@ export async function getScenario(scenarioName = 'surge', seed = 42) {
   };
 }
 
-/**
- * Fetch authoritative baseline allocation for a scenario
- */
+/** Fetch authoritative baseline allocation for a scenario */
 export async function fetchBaseline(scenarioConfig) {
   if (preferRealApi) {
     let res;
     try {
       res = await fetch(`${API_BASE}/scenario/baseline`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(scenarioConfig)
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(scenarioConfig)
       });
     } catch (netErr) {
       throw new Error(`Unable to connect to FastAPI backend at ${API_BASE}/scenario/baseline.`);
     }
-
-    if (!res.ok) {
-      const msg = await parseErrorResponse(res, 'Baseline fetch failed');
-      throw new Error(msg);
-    }
+    if (!res.ok) throw new Error(await parseErrorResponse(res, 'Baseline fetch failed'));
     return await res.json();
   }
-
   const sc = SCENARIOS[scenarioConfig?.scenario_name] || SCENARIOS.surge;
   return sc.baseline?.allocation || null;
 }
 
-/**
- * Fetch demand forecast
- */
+/** Fetch demand forecast */
 export async function fetchForecast(scenarioConfig) {
   if (preferRealApi) {
     let res;
     try {
       res = await fetch(`${API_BASE}/forecast`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenario: scenarioConfig })
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scenario: scenarioConfig })
       });
     } catch (netErr) {
       throw new Error(`Unable to connect to FastAPI backend at ${API_BASE}/forecast.`);
     }
-
-    if (!res.ok) {
-      const msg = await parseErrorResponse(res, 'Forecast API failed');
-      throw new Error(msg);
-    }
+    if (!res.ok) throw new Error(await parseErrorResponse(res, 'Forecast API failed'));
     return await res.json();
   }
-
   await new Promise(r => setTimeout(r, 150));
   const sc = SCENARIOS[scenarioConfig?.scenario_name] || SCENARIOS.surge;
   return sc.forecast;
 }
 
 /**
- * Simulate allocation
+ * Analyze user-defined tasks. The backend automatically determines normal/peak/surge
+ * from aggregate demand, builds the task-derived forecast, and runs resource optimization.
  */
+export async function analyzeCustomWorkload(customTasks) {
+  if (preferRealApi) {
+    let res;
+    try {
+      res = await fetch(`${API_BASE}/custom-workload/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(customTasks)
+      });
+    } catch (netErr) {
+      throw new Error(`Unable to connect to FastAPI backend at ${API_BASE}/custom-workload/analyze.`);
+    }
+    if (!res.ok) throw new Error(await parseErrorResponse(res, 'Custom workload analysis failed'));
+    return await res.json();
+  }
+
+  // Deterministic browser fallback using the same demand-band thresholds.
+  const canonical = { teller: 20, loans: 4.8, customer_service: 10 };
+  const rates = {
+    teller: (customTasks.teller || []).reduce((s, t) => s + Number(t.customersPerHour || 0), 0),
+    loans: (customTasks.loans || []).reduce((s, t) => s + Number(t.customersPerHour || 0), 0),
+    customer_service: (customTasks.customer_service || []).reduce((s, t) => s + Number(t.customersPerHour || 0), 0)
+  };
+  const multiplier = (rates.teller + rates.loans + rates.customer_service) /
+    (canonical.teller + canonical.loans + canonical.customer_service || 1);
+  const scenarioName = multiplier < 1.35 ? 'normal' : multiplier < 2.25 ? 'peak' : 'surge';
+  const scenario = SCENARIOS[scenarioName] || SCENARIOS.normal;
+  return {
+    scenario: scenario,
+    scenario_label: scenarioName === 'normal' ? 'Normal demand' : scenarioName === 'peak' ? 'Peak demand' : 'Surge demand',
+    demand_multiplier: Number(multiplier.toFixed(2)),
+    forecast: scenario.forecast,
+    optimization: {
+      scenario_name: scenarioName,
+      baseline: scenario.baseline,
+      optimized: scenario.optimized,
+      score_breakdown: scenario.score_breakdown,
+      improvement: scenario.improvement,
+      explanation: 'Browser fallback used. Start FastAPI for task-derived forecasting and authoritative optimization.',
+      feasible: scenario.feasible,
+      forecast: scenario.forecast
+    }
+  };
+}
+
+/** Simulate allocation */
 export async function simulateAllocation(scenarioConfig, forecast, allocation) {
   if (preferRealApi) {
     let res;
     try {
       res = await fetch(`${API_BASE}/simulate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scenario: scenarioConfig, forecast, allocation })
       });
     } catch (netErr) {
       throw new Error(`Unable to connect to FastAPI backend at ${API_BASE}/simulate.`);
     }
-
-    if (!res.ok) {
-      const msg = await parseErrorResponse(res, 'Simulation API failed');
-      throw new Error(msg);
-    }
+    if (!res.ok) throw new Error(await parseErrorResponse(res, 'Simulation API failed'));
     return await res.json();
   }
-
   await new Promise(r => setTimeout(r, 150));
   const sc = SCENARIOS[forecast?.scenario_name] || SCENARIOS.surge;
   return sc.baseline.result;
 }
 
-/**
- * Run optimizer — FR-API-5
- */
+/** Run optimizer — FR-API-5 */
 export async function optimizeScenario(scenarioConfig, forecast) {
   if (preferRealApi) {
     let res;
     try {
       res = await fetch(`${API_BASE}/optimize`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scenario: scenarioConfig, forecast })
       });
     } catch (netErr) {
       throw new Error(`Unable to connect to FastAPI backend at ${API_BASE}/optimize.`);
     }
-
-    if (!res.ok) {
-      const msg = await parseErrorResponse(res, 'Optimizer API failed');
-      throw new Error(msg);
-    }
+    if (!res.ok) throw new Error(await parseErrorResponse(res, 'Optimizer API failed'));
     return await res.json();
   }
-
-  // Simulate optimization computation time (250ms)
   await new Promise(r => setTimeout(r, 250));
   const sc = SCENARIOS[scenarioConfig?.scenario_name] || SCENARIOS.surge;
   return {
@@ -222,43 +220,28 @@ export async function optimizeScenario(scenarioConfig, forecast) {
   };
 }
 
-/**
- * What-If Simulation — FR-API-6
- * Computes custom staff rebalance metrics on the fly
- */
+/** What-If Simulation — FR-API-6 */
 export async function simulateWhatIf(scenarioConfig, forecast, allocationPlan, queuesConfig) {
   if (preferRealApi) {
     let res;
     try {
       res = await fetch(`${API_BASE}/whatif`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scenario: scenarioConfig, forecast, allocation: allocationPlan })
       });
     } catch (netErr) {
       throw new Error(`Unable to connect to FastAPI backend at ${API_BASE}/whatif.`);
     }
-
-    if (!res.ok) {
-      const msg = await parseErrorResponse(res, 'What-If simulation failed');
-      throw new Error(msg);
-    }
+    if (!res.ok) throw new Error(await parseErrorResponse(res, 'What-If simulation failed'));
     return await res.json();
   }
 
   await new Promise(r => setTimeout(r, 100));
-  
-  // Instant deterministic simulation logic matching queuing physics
   const staffMap = allocationPlan.staff_by_queue;
   const arrivalsMap = forecast.expected_arrivals;
   const queues = queuesConfig || SCENARIOS.surge.queues;
-  
   const perQueue = {};
-  let totalServed = 0;
-  let totalOverloaded = 0;
-  let weightedWaitSum = 0;
-  let totalArrivals = 0;
-  let maxP95 = 0;
+  let totalServed = 0, totalOverloaded = 0, weightedWaitSum = 0, totalArrivals = 0, maxP95 = 0;
 
   queues.forEach(q => {
     const qid = q.queue_id;
@@ -266,43 +249,25 @@ export async function simulateWhatIf(scenarioConfig, forecast, allocationPlan, q
     const arrivals = arrivalsMap[qid] || [];
     const qArrivalTotal = arrivals.reduce((a, b) => a + b, 0);
     totalArrivals += qArrivalTotal;
-
-    // Service capacity per 15 min slot: (15 / avg_service_time) * staff
     const slotCapacity = (15.0 / q.avg_service_time_minutes) * staff;
-    
-    let queueOverloads = [];
-    let currentBacklog = 0;
-    let slotWaits = [];
-
+    let queueOverloads = [], currentBacklog = 0, slotWaits = [];
     arrivals.forEach((arrived, idx) => {
       currentBacklog += arrived;
       const served = Math.min(currentBacklog, slotCapacity);
       currentBacklog -= served;
-
-      // Estimated wait in slot: (backlog / slotCapacity) * 15
       const waitEst = slotCapacity > 0 ? (currentBacklog / slotCapacity) * 15 : 30;
       slotWaits.push(waitEst);
-
-      // Overload threshold: wait > 10 min or backlog > capacity * 1.2
-      if (waitEst > 10.0 || arrived > slotCapacity * 1.1) {
-        queueOverloads.push(forecast.slots[idx]);
-      }
+      if (waitEst > 10.0 || arrived > slotCapacity * 1.1) queueOverloads.push(forecast.slots[idx]);
     });
-
     const avgWait = slotWaits.reduce((a, b) => a + b, 0) / (slotWaits.length || 1);
     const sortedWaits = [...slotWaits].sort((a, b) => a - b);
     const p95Wait = sortedWaits[Math.floor(sortedWaits.length * 0.95)] || avgWait * 1.8;
     const utilization = Math.min(0.99, (qArrivalTotal * q.avg_service_time_minutes) / (staff * 8 * 60));
-
     perQueue[qid] = {
-      avg_wait_minutes: parseFloat(avgWait.toFixed(1)),
-      p95_wait_minutes: parseFloat(p95Wait.toFixed(1)),
-      utilization: parseFloat(utilization.toFixed(2)),
-      overloaded_slots: queueOverloads,
-      total_served: Math.max(0, qArrivalTotal - currentBacklog),
-      end_backlog: currentBacklog
+      avg_wait_minutes: parseFloat(avgWait.toFixed(1)), p95_wait_minutes: parseFloat(p95Wait.toFixed(1)),
+      utilization: parseFloat(utilization.toFixed(2)), overloaded_slots: queueOverloads,
+      total_served: Math.max(0, qArrivalTotal - currentBacklog), end_backlog: currentBacklog
     };
-
     weightedWaitSum += avgWait * qArrivalTotal;
     totalServed += (qArrivalTotal - currentBacklog);
     totalOverloaded += queueOverloads.length;
@@ -310,15 +275,11 @@ export async function simulateWhatIf(scenarioConfig, forecast, allocationPlan, q
   });
 
   const branchAvgWait = totalArrivals > 0 ? weightedWaitSum / totalArrivals : 4.0;
-
   return {
-    allocation_label: 'whatif',
-    per_queue: perQueue,
+    allocation_label: 'whatif', per_queue: perQueue,
     branch_wide: {
-      avg_wait_minutes: parseFloat(branchAvgWait.toFixed(1)),
-      p95_wait_minutes: parseFloat(maxP95.toFixed(1)),
-      overloaded_slot_count: totalOverloaded,
-      total_served: totalServed,
+      avg_wait_minutes: parseFloat(branchAvgWait.toFixed(1)), p95_wait_minutes: parseFloat(maxP95.toFixed(1)),
+      overloaded_slot_count: totalOverloaded, total_served: totalServed,
       total_end_backlog: Object.values(perQueue).reduce((a, b) => a + b.end_backlog, 0)
     }
   };
