@@ -1,136 +1,126 @@
-# ⚠️ CHATGPT-ONLY HACKATHON ORCHESTRATION CONTEXT
+# AAVISHKARA-26 — ChatGPT Orchestration State
 
-> **This file is exclusively for ChatGPT orchestration.** It is not project requirements, architecture, or coding instructions.
->
-> Coding agents MUST NOT infer developer identity, ownership, task assignments, or implementation requirements from this file. They must follow the user's explicit task, `AGENTS.md`, and relevant project documentation.
->
-> ChatGPT acts as the team's orchestration/CTO layer: maintain state, decompose work, allocate tasks, manage dependencies, challenge scope, track risks, and coordinate the four registered members.
+> **ChatGPT-only state.** This file is for orchestration across conversations, not coding instructions. Coding agents must follow the user's task, `AGENTS.md`, project docs, and existing code.
 
-## Event
-- AAVISHKARA-26, 24-hour hackathon.
-- Official event: 9 Sep 2026 10:00 AM → 10 Sep 2026 2:00 PM.
-- Development begins: 9 Sep 2026 1:30 PM.
-- Final submission freeze: 10 Sep 2026 7:00 AM; submitted version is the judging baseline.
-- Break: 7:00–8:00 AM; breakfast 8:00–9:00 AM.
-- Presentation: 9:00 AM–12:30 PM; target slot ~10–12 min = 5 min PPT + 3 min demo + 2 min Q&A, plus setup/transition.
-- Final evaluation: 1:00–2:30 PM.
-- AI-assisted development, internet, external APIs, cloud services, GitHub, and open-source libraries are permitted; AI usage must be disclosed. Only registered team members may contribute technical work.
+## 1. Event constraints
+- Hackathon: AAVISHKARA-26.
+- Official event: 2026-09-09 10:00 → 2026-09-10 14:00.
+- Development starts: 2026-09-09 13:30.
+- Judging-version freeze: 2026-09-10 07:00. No team-initiated modification after freeze.
+- Presentation: 09:00–12:30; target ~10–12 min: 5 min PPT + 3 min demo + 2 min Q&A/setup.
+- AI assistance, internet, GitHub, external APIs/cloud, and open-source libraries are allowed; AI usage must be disclosed.
+- Only registered team members may contribute technical work.
 
-## Team
-- Kiran — core member; primary AI/optimization/product lead; also helps backend.
-- Karthi — core member; primary backend/simulation lead; Kiran assists.
-- Deepansha — beginner; simpler UI/frontend tasks.
-- Reethu — beginner; simpler QA/data/demo-validation tasks.
-- All four work simultaneously on the same repository and each has a laptop.
-- Assume all members are beginner-level vibe coders; tasks must be explicit and independently verifiable.
+## 2. Team / collaboration
+- Registered members: Kiran, Karthi, Reethu, Deepansha.
+- All four can work simultaneously on the same GitHub repository and have their own laptops.
+- Team is beginner-level; instructions and interfaces must be concrete and independently verifiable.
+- Do not infer identity/ownership from names or roles when delegating to coding agents.
 
-## Chosen problem
-**JP-012 — Customer Arrival Queue Simulation & Resource Allocation Optimizer**.
+## 3. Selected problem
+**JP-012 — Customer Arrival Queue Simulation & Resource Allocation Optimizer**
+
 Domain: **bank branch operations**.
 
-Core requirements from the problem statement:
-- Analyze customer arrival patterns, appointment schedules, and available resources.
-- Simulate multiple service queues.
-- Estimate waiting time.
-- Predict demand by time slot.
-- Recommend staff/resource allocation.
-- Identify overloaded periods.
-- Compare optimized allocation with a basic allocation strategy.
-- Respect resource limits.
-- Recommendation logic must be explainable.
+Required outcome:
+`arrival/service data → demand prediction → multiple queues → waiting-time estimation → resource allocation → overload detection → baseline comparison → explainable recommendation`.
 
-## Product direction
-Build an **AI-assisted bank operations decision-support system**, not merely a queue simulator.
+Hard requirements to preserve:
+- resource limits/constraints
+- peak-load demonstration
+- explainable recommendation logic
+- comparison with a basic allocation strategy
+- measurable waiting-time improvement
 
-Core loop:
-`Historical/synthetic data → demand forecast → queue simulation → multi-objective resource optimization → explainable recommendation → what-if simulation → before/after comparison.`
-
-Primary user: bank branch operations manager.
-
-MVP scenarios: normal day, peak period, sudden surge.
-
-Primary demo outcome: **prove that an allocation decision reduces waiting time under resource constraints.**
+## 4. Product decision
+Working concept: **bank branch operations decision-support dashboard**.
+Primary user: branch operations manager.
 
 Demo story:
 1. Show current branch state.
-2. Trigger peak/surge demand.
-3. Detect projected overload.
-4. Recommend a resource reallocation with reasons.
-5. Simulate the recommendation.
-6. Compare baseline vs optimized results.
-7. Show measurable improvement and explain why.
+2. Select normal/peak/surge scenario.
+3. Predict demand and identify overload.
+4. Recommend feasible staff/resource reallocation.
+5. Run what-if simulation.
+6. Compare baseline vs optimized metrics.
+7. Explain the recommendation and constraints.
 
-## Technical decisions / defaults
-- Python is mandatory.
-- Preferred backend: FastAPI.
-- Preferred frontend: Next.js + TypeScript + Tailwind unless existing repo constraints justify otherwise.
-- Use deterministic/stochastic queue simulation and optimization as the source of truth.
-- AI approach: hybrid. Use a simple explainable forecasting model; optimization should be mathematical/constraint-based; LLM is optional for natural-language explanations/scenario assistance, not the sole decision engine.
-- Multi-objective optimization: prioritize reduced waiting time, while balancing overload/queue performance and staff utilization subject to hard resource constraints.
-- Keep staff skills and complex appointment modeling out of the initial MVP unless they become necessary for differentiation.
-- Keep persistence/authentication optional. Prefer no database for MVP unless saved scenarios/history materially improve the demo.
-- Generate synthetic bank customer data; no organizer dataset is available.
-- Keep CSV upload out of MVP unless needed.
+The product is **not** merely a queue simulator and not an autonomous agent.
 
-## Scope discipline
-### P0 / must work
-- Bank branch with multiple service queues.
-- Synthetic customer arrival/service data.
-- Normal/peak/surge scenarios.
-- Queue simulation.
-- Waiting-time metrics.
-- Demand forecast.
-- Resource constraints.
-- Multi-objective allocation recommendation.
-- Baseline vs optimized comparison.
-- Explainable recommendation.
-- Interactive what-if simulation.
-- Strong operations dashboard.
+## 5. Technical decisions
+- Python required for backend/simulation/optimization/data work.
+- FastAPI is the preferred backend.
+- Frontend should use the repository's selected web stack; avoid framework changes without a concrete reason.
+- Deterministic/stochastic simulation + transparent constraint/scoring logic are the source of truth.
+- Forecasting should be simple and explainable; synthetic data is acceptable.
+- LLM use is optional and limited to explanation/UX assistance. Core forecasts, queue metrics, constraints, and allocation decisions must work without an LLM.
+- MVP database/persistence is optional; do not add it unless it materially improves the demo.
 
-### P1 / only if P0 is stable
-- User-adjustable parameters.
-- Scenario save/share.
-- More detailed appointment handling.
-- Staff skill compatibility.
-- CSV import.
+## 6. Scope priority
+### P0 — must work
+- multiple bank service queues
+- synthetic arrival/service data
+- normal/peak/surge scenarios
+- demand forecast
+- queue simulation + waiting metrics
+- feasible resource allocation optimization
+- baseline fixed/basic allocation
+- before/after comparison
+- explainable recommendation
+- interactive what-if result
+- clear operations dashboard
 
-### Explicitly avoid unless everything else is finished
-- Authentication.
-- Complex microservices.
-- Real bank integrations.
-- Large-scale cloud infrastructure.
-- Sophisticated deep learning.
-- Autonomous AI agents controlling operations.
+### P1 — only after P0 is stable
+- adjustable parameters
+- scenario persistence
+- richer appointments
+- staff skill compatibility
+- CSV import
 
-## Repository state at planning start
-Repository: `Kiran-official/Vortex_SICM`, default branch `main`.
-It is currently a universal hackathon boilerplate with empty starter directories and planning docs. Existing top-level structure includes:
-- `.chatgpt/`
-- `ai/`
-- `assets/`
-- `backend/`
-- `data/`
-- `database/`
-- `docs/`
-- `frontend/`
-- `infra/`
-- `scripts/`
-- `tests/`
-- `AI_INSTRUCTIONS.md`
-- `README.md`
+### Avoid unless P0 is finished and there is a demonstrated need
+- authentication/RBAC
+- microservices
+- real bank integrations/customer data
+- complex cloud infrastructure
+- deep-learning-heavy forecasting
+- autonomous operational agents
 
-Existing `AI_INSTRUCTIONS.md` gives general coding guidance; it must not override explicit task instructions or this orchestration boundary.
+## 7. Repository
+Repo: `Kiran-official/Vortex_SICM`, default branch `main`.
 
-## Orchestration rules
-- ChatGPT owns overall decomposition and prioritization; members own implementation decisions within assigned areas.
-- Give beginners bounded tasks with explicit inputs/outputs and acceptance criteria.
-- Keep interfaces stable so four people can work in parallel.
-- Prefer vertical, testable slices over disconnected scaffolding.
-- Do not let one person's work block all others unnecessarily.
-- Merge/integrate frequently and verify end-to-end after major milestones.
-- No coding agent should infer that it is Kiran/Karthi/Reethu/Deepansha.
-- Coding agents execute explicit implementation tasks only; they do not orchestrate teammates.
+Current structure includes `.chatgpt/`, `ai/`, `assets/`, `backend/`, `data/`, `database/`, `docs/`, `frontend/`, `infra/`, `scripts/`, `tests/`, `AI_INSTRUCTIONS.md`, `AGENTS.md`, and `README.md`.
 
-## Decision target
-The judges should remember:
-**B + C + E — the optimizer measurably reduces waiting time, the what-if simulation makes the decision tangible, and the recommendation is explainable.**
+Planning baseline was a universal hackathon boilerplate; no application implementation had been started at that point.
+
+## 8. Agentic instruction state
+- `AGENTS.md`: strengthened with instruction priority, project constraints, agent boundary, pre-edit inspection, engineering rules, test requirements, integration discipline, and hackathon integrity.
+- `AI_INSTRUCTIONS.md`: aligned with the same constraints, including deterministic core logic, explainability, metric discipline, focused testing, and stale-context protection.
+- `.chatgpt/HACKATHON_CONTEXT.md`: this orchestration snapshot; **not** coding guidance.
+
+## 9. Synchronization protocol — important
+The repository is the source of truth for implementation state. The context file is the source of truth for ChatGPT's cross-conversation orchestration state.
+
+**Before every substantive response/action in this project, ChatGPT should re-check the current repository state when repository changes may have occurred.** Do not rely on an old snapshot of code or file contents.
+
+When another team member/agent makes changes:
+1. Inspect current `main` state and recent commits/diffs.
+2. Determine what changed and whether architecture/interfaces/tests are affected.
+3. Update this file's project state/decisions/risks as needed.
+4. Only then plan or implement the next change.
+
+This synchronization cannot be triggered invisibly by GitHub changes between messages. If a change happens outside the current interaction, the next project interaction must begin with a repository re-sync; never assume the previous context is still current.
+
+## 10. Current implementation state
+- Application code: **not yet started** at the planning snapshot.
+- Agent/instruction hardening: complete.
+- Latest verified repository state before this context update: commit `b7dfb34f08885a6c857227c472cb92bb56a4b781` (`AI_INSTRUCTIONS.md` alignment).
+- Next step: inspect current docs/boilerplate, lock the minimal architecture/contracts, then build the smallest end-to-end P0 vertical slice.
+
+## 11. Decision discipline
+For every feature, ask:
+- Does it directly improve the JP-012 judging outcome?
+- Is it necessary for the P0 demo path?
+- Can it be deterministic, explainable, and tested?
+- Does it introduce avoidable integration risk for four concurrent contributors?
+
+Prefer a smaller complete system over a larger incomplete system.
