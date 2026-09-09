@@ -11,16 +11,15 @@ Use task IDs in commits and Slack `[CHANGE]` posts. Ownership is a responsibilit
 - **KARTHI-006:** Backend integration + performance validation. *(Completed; no production code changes required.)*
 
 ### Karthi validation evidence
-- Latest full backend regression: **231/231 passed**.
+- Latest reported full backend regression: **231/231 passed**.
 - Normal/Peak/Surge complete pipelines verified.
 - Determinism: **15/15 scenario+seed checks passed**.
 - Demand ordering: **Normal 213.00 < Peak 359.00 < Surge 874.17** for seed 42.
 - Optimized allocations satisfy queue min/max and total staff budget.
 - Invalid queue IDs, negative staff/arrivals, incompatible forecasts, malformed scenarios, and infeasible allocations are rejected.
 - Optimized allocations were evaluated through the real simulator.
-- Five-run seed-42 average end-to-end runtime: **13.7 ms Normal, 16.5 ms Peak, 32.0 ms Surge**; maximum observed runtime was **34.5 ms**.
+- Five-run seed-42 average end-to-end runtime: **13.7 ms Normal, 16.5 ms Peak, 32.0 ms Surge**; maximum observed runtime **34.5 ms**.
 - FastAPI/error-handling suite: **32/32 passed**.
-- Working tree was clean and local `main` synchronized with `origin/main` at completion.
 
 ## Kiran — optimization/decision/API integration
 - **KIRAN-001:** Optimization sizing benchmark + scoring validation; real implementation counts/runtime and ADR-004 evidence. *(Completed & merged — PR #4)*
@@ -56,22 +55,23 @@ Use task IDs in commits and Slack `[CHANGE]` posts. Ownership is a responsibilit
 - **DEEPANSHA-003:** Real FastAPI integration + demo polish. *(Implemented on `DEEPANSHA-001-dashboard`; commit `7609a8c`.)*
 
 ### Deepansha current branch evidence
-- Dashboard branch has **7 commits ahead of `main` and 19 commits behind `main`** and must be reviewed/integrated before it becomes the release baseline.
+- Current GitHub comparison: **7 commits ahead and 30 commits behind `main`**. No PR currently exists for the branch.
 - Branch includes Vite/React frontend, layout/header/sidebar, branch overview, metrics, queue cards, forecast/forecast chart, overload alerts, baseline/optimized allocation panels, comparison matrix, explanation panel, what-if simulator, loading/empty/error states, API service, and Vite proxy configuration.
-- Deepansha verified the Vite production build (**48 modules**).
+- Vite production build verified with **48 modules**.
 - Real HTTP flows were checked through Vite proxy + FastAPI for health, scenario generation, forecast, simulate, optimize, and what-if.
 - Normal/Peak/Surge live flows and structured 422 behavior were checked.
 - Backend-unavailable behavior reaches the dashboard `ErrorState`.
-- Playwright automation was attempted, but browser download failed with an external CDN 404; this is a tooling limitation, not a confirmed application failure.
+- Playwright automation was attempted, but browser download failed with an external CDN 404; manual browser validation is still required.
+- `frontend/src/mocks/mockData.js` exists on the feature branch. This does not by itself establish that mocks are used in production/demo execution, but the final/demo path must be verified as live-API-only.
 - Local `skillset-dashboard/` is scratch/untracked material and is not part of the intended task commit.
-- **Next action:** open PR from `DEEPANSHA-001-dashboard` to `main`, review it, then run final integrated QA.
+- **Next action:** synchronize/rebase the branch with current `main`, open the PR, review it, then hand over to Reethu for final integrated QA.
 
 ## Integrated state — 2026-09-09
 The backend P0 path is implemented and validated through the real API surface:
 
 `synthetic data → forecast → simulation → baseline → optimization → comparison → explanation → API → dashboard`
 
-Latest merged documentation synchronization before this update was PR #21 (`ad87af1`). This update records the subsequent Deepansha dashboard branch state without claiming that branch is merged.
+Current `main` is `4c35a7a73909979e4e33d3521b6fca2cc92dbc35`, the PR #22 documentation-state merge. The dashboard branch remains unmerged.
 
 ## P0 decision-quality evidence
 Existing deterministic demo validation reports:
@@ -79,10 +79,10 @@ Existing deterministic demo validation reports:
 - **Peak:** 48.7% wait reduction.
 - **Surge:** capacity-expansion relief verified.
 
-Additional live seed-42 evidence recorded in the state sync includes Normal optimized allocation `{teller:4, loans:1, customer_service:2}`, Peak `{teller:4, loans:2, customer_service:3}`, and Surge baseline/optimized `{teller:4, loans:3, customer_service:3}`.
+Seed-42 optimized allocations: Normal `{teller:4, loans:1, customer_service:2}`, Peak `{teller:4, loans:2, customer_service:3}`, Surge baseline/optimized `{teller:4, loans:3, customer_service:3}`.
 
 ## Current priorities
-1. **Deepansha:** open/review dashboard PR, complete real API → dashboard integration, remove any remaining mock/demo execution paths, and polish the demo.
+1. **Deepansha:** synchronize/rebase dashboard branch, open/review PR, verify no mock/demo execution path remains, and polish the demo.
 2. **Reethu:** perform final integrated QA, browser verification, metric traceability, clean-clone validation, demo rehearsal, and release sign-off.
 3. **Kiran/Karthi:** integration support only; no new backend feature work unless a confirmed P0 blocker appears.
 
