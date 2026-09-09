@@ -13,13 +13,13 @@ Invalid allocations are never scored or returned.
 ## Objective
 `objective = w1*wait_score + w2*overload_score + w3*utilization_score + w4*reallocation_cost`
 
-Default weights:
+Default weights (updated after KIRAN-001 benchmark -- see ADR-004):
 - wait: 0.4
-- overload: 0.3
-- utilization: 0.2
+- overload: 0.4
+- utilization: 0.1
 - reallocation cost: 0.1
 
-Terms are normalized to comparable ranges. Wait combines branch-wide average and p95 wait; overload uses overloaded-slot count; utilization rewards a target utilization band (e.g. 0.6–0.85); reallocation cost is normalized total absolute staff movement from baseline.
+Terms are normalized to comparable ranges. Wait combines branch-wide average and p95 wait (normalized to 400 min reference); overload uses overloaded-slot count (normalized to 32 slots); utilization rewards a target utilization band (0.6-0.85); reallocation cost is normalized total absolute staff movement from baseline (normalized to 20 staff).
 
 ## Tie-breaking
 For equal scores within floating-point tolerance, prefer lower reallocation cost, then stable enumeration order. Must be deterministic.
