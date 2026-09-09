@@ -59,14 +59,22 @@ def forecast(scenario: ScenarioConfig) -> ForecastResult:
 
     Steps:
     1. Generate raw arrival data from the deterministic generator.
-    2. Apply rolling-average smoothing (window=3 slots = 45 min) to reduce
+    2. Apply rolling-average smoothing (window=3 slots ≈ 45 min) to reduce
        slot-to-slot noise while preserving the surge shape.
     3. Return a ForecastResult consumable directly by the simulation engine.
+
+    Scenario scaling (normal/peak/surge) and time-of-day shaping are applied
+    by the data generator.  _FORECAST_MULTIPLIERS are intentionally 1.0
+    (pass-through) so the forecasting layer does not double-count those
+    effects.  Its primary value-add is deterministic smoothing.
 
     Fallback (FR-FCST-3): if generated data has all-zero arrivals for a queue
     (e.g. very short horizon or zero base rate), the forecast returns zeros
     without crashing — the simulation handles zero-arrival queues gracefully.
     """
+    if not scenario.queues:
+        raise ValueError("Scenario must define at least one queue for forecasting")
+
     raw: ForecastResult = generate(scenario)
 
     smoothed_arrivals: Dict[str, List[float]] = {}
