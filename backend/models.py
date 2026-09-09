@@ -267,6 +267,9 @@ class OptimizationResult(BaseModel):
     improvement: ImprovementSummary
     explanation: str
     feasible: bool
+    forecast: Optional[ForecastResult] = Field(
+        None, description="Demand forecast associated with the optimization run"
+    )
 
 
 # ---------------------------------------------------------------------------
