@@ -1,0 +1,18 @@
+# Vortex_SICM — Python dependencies
+# Python 3.11+ required
+# Install: pip install -r requirements.txt
+
+# ── Web framework ──────────────────────────────────────────
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+
+# ── Validation / serialization ─────────────────────────────
+pydantic==2.9.0
+
+# ── Testing ────────────────────────────────────────────────
+pytest==8.3.3
+pytest-asyncio==0.24.0
+httpx==0.27.2          # FastAPI TestClient
+
+# ── Dev / linting (optional, not required to run) ──────────
+# ruff==0.6.5
