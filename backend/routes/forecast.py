@@ -3,12 +3,16 @@ backend/routes/forecast.py — /api/forecast endpoint.
 Spec: docs/architecture/api-contract.md
 """
 from __future__ import annotations
+
+import logging
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from backend.models import ForecastResult, ScenarioConfig
 from backend.forecasting.forecast import forecast
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 class ForecastRequest(BaseModel):
@@ -23,5 +27,12 @@ def get_forecast(req: ForecastRequest) -> ForecastResult:
     """
     try:
         return forecast(req.scenario)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail={"error": "forecast_error", "message": str(e)})
+    except Exception:
+        logger.exception("Forecast generation failed")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "forecast_error",
+                "message": "Unable to generate forecast",
+            },
+        )
