@@ -254,3 +254,14 @@ def test_whatif_endpoint_rejects_invalid_allocation():
     )
     assert response.status_code == 422
     assert response.json()["detail"]["error"] == "staff_limit_violation"
+
+
+def test_whatif_endpoint_rejects_incompatible_forecast():
+    scenario, forecast = _scenario_and_forecast()
+    forecast["scenario_name"] = "peak"
+    response = client.post(
+        "/api/whatif",
+        json={"scenario": scenario, "forecast": forecast, "allocation": _allocation()},
+    )
+    assert response.status_code == 422
+    assert response.json()["detail"]["error"] == "scenario_mismatch"
