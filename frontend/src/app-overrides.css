@@ -1,40 +1,13 @@
 /* QueueWise presentation refinements */
-:root {
-  --font-main: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-display: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
-
+:root { --font-main: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; --font-display: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
 body, button, input, select, textarea { font-family: var(--font-main); }
 .font-mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
 
-/* Keep the forecast warning in a dedicated layer instead of drawing text over bars. */
-.forecast-chart-svg-container {
-  position: relative;
-  z-index: 1;
-  overflow: visible;
-  padding-top: 34px;
-}
+.forecast-chart-svg-container { position: relative; z-index: 1; overflow: visible; padding-top: 34px; }
 .forecast-svg { position: relative; z-index: 1; display: block; overflow: visible; }
 .forecast-chart-tooltip { position: absolute; z-index: 20; }
-.forecast-warning-banner {
-  position: absolute;
-  top: 0;
-  left: 46px;
-  right: 24px;
-  min-height: 28px;
-  display: flex;
-  align-items: center;
-  padding: 6px 10px;
-  border: 1px solid var(--signal-warning-border);
-  border-radius: 8px;
-  background: var(--signal-warning-bg);
-  color: var(--signal-warning-text);
-  font: 700 10px/1.2 "SFMono-Regular", Consolas, monospace;
-  letter-spacing: .04em;
-  z-index: 10;
-}
+.forecast-warning-banner { position: absolute; top: 0; left: 46px; right: 24px; min-height: 28px; display: flex; align-items: center; padding: 6px 10px; border: 1px solid var(--signal-warning-border); border-radius: 8px; background: var(--signal-warning-bg); color: var(--signal-warning-text); font: 700 10px/1.2 "SFMono-Regular", Consolas, monospace; letter-spacing: .04em; z-index: 10; }
 
-/* Visible, auditable input definition */
 .input-data-card { padding: 24px; }
 .input-data-intro { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; margin-bottom: 22px; }
 .input-data-title { font-size: 18px; font-weight: 700; letter-spacing: -.02em; margin-bottom: 7px; }
@@ -46,6 +19,13 @@ body, button, input, select, textarea { font-family: var(--font-main); }
 .input-metric-label { color: var(--text-muted); font: 700 10px/1.2 "SFMono-Regular", Consolas, monospace; letter-spacing: .06em; }
 .input-metric strong { font-size: 24px; line-height: 1.1; letter-spacing: -.03em; }
 .input-metric span:last-child { color: var(--text-muted); font-size: 11px; line-height: 1.45; }
+.input-table-wrap { margin-bottom: 18px; border: 1px solid var(--border-subtle); border-radius: 12px; overflow-x: auto; background: var(--bg-card); }
+.input-table-heading { padding: 12px 14px; border-bottom: 1px solid var(--border-subtle); background: var(--bg-surface-2); font: 700 10px/1.2 "SFMono-Regular", Consolas, monospace; letter-spacing: .07em; }
+.input-table { width: 100%; min-width: 700px; border-collapse: collapse; font-size: 12px; }
+.input-table th { padding: 10px 14px; text-align: left; color: var(--text-muted); background: var(--bg-surface-2); font: 700 9.5px/1.2 "SFMono-Regular", Consolas, monospace; letter-spacing: .05em; white-space: nowrap; }
+.input-table td { padding: 11px 14px; border-top: 1px solid var(--border-divider); color: var(--text-secondary); white-space: nowrap; }
+.input-table td:first-child { color: var(--text-primary); }
+.input-table td:first-child span { display: block; margin-top: 2px; color: var(--text-dim); font: 9px "SFMono-Regular", Consolas, monospace; }
 .input-definition-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; }
 .input-definition-block { padding: 16px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--bg-card); }
 .input-definition-block h4 { margin-bottom: 10px; font: 700 10px/1.2 "SFMono-Regular", Consolas, monospace; letter-spacing: .07em; color: var(--text-primary); }
@@ -53,12 +33,8 @@ body, button, input, select, textarea { font-family: var(--font-main); }
 .input-definition-block li + li { margin-top: 5px; }
 .input-definition-block code { padding: 1px 4px; border-radius: 4px; background: var(--bg-surface-3); font-family: monospace; }
 .input-accuracy-block { border-color: var(--accent-cyan-border); }
-
-/* Do not let sticky header/section layers hide warning copy. */
 .vortex-section { position: relative; z-index: auto; scroll-margin-top: 90px; }
 .vortex-card, .alerts-card-list, .alerts-empty-state { position: relative; z-index: 2; }
-
-/* Human-readable wait durations after 60 minutes. */
 .stat-duration, .queue-metric-num, .res-metric-val, .mini-stat-val { line-height: 1.25; }
 
 @media (max-width: 900px) {
