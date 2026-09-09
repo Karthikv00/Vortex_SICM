@@ -1,18 +1,25 @@
-"""REETHU-001: focused validation for synthetic scenario generation.
+"""REETHU-001: Test scaffolding and generator test suite.
 
-These tests intentionally exercise the public generator contract rather than
-implementation details. The production generator is owned by Karthi and must
-expose data.generator.generate(scenario_config).
+Validates the synthetic customer arrival generator against the documented contract:
+- FR-DATA-1: Generate synthetic arrivals per queue per slot for a configurable day.
+- FR-DATA-2: Support normal, peak, surge with distinct demand profiles.
+- FR-DATA-3: Reproducible output given a fixed random seed (TC-01).
+- FR-DATA-4: Standalone testability independent of API/UI.
+- Acceptance Criteria & Test Cases: TC-01 (determinism), TC-02 (surge > normal), TC-03 (horizon coverage).
 """
 
 from copy import deepcopy
+from typing import Any, Dict, List
 
 import pytest
+from pydantic import ValidationError
 
-from data.generator import generate
+from backend.models import ForecastResult, ScenarioConfig
+from data.generator import generate, generate_arrivals, generate_slot_labels
+from data.scenarios import get_scenario, normal_scenario, peak_scenario, surge_scenario
 
 
-BASE_CONFIG = {
+BASE_CONFIG: Dict[str, Any] = {
     "scenario_name": "normal",
     "seed": 42,
     "horizon_start": "09:00",
@@ -38,8 +45,10 @@ BASE_CONFIG = {
 }
 
 
-def _arrival_data(result):
-    """Read the generated arrival payload without depending on a concrete model."""
+def _arrival_data(result: Any) -> Dict[str, List[float]]:
+    """Extract the arrival mapping (queue_id -> list of counts) from a result object or dict."""
+    if hasattr(result, "expected_arrivals"):
+        return result.expected_arrivals
     if hasattr(result, "model_dump"):
         result = result.model_dump()
     elif hasattr(result, "__dict__"):
@@ -51,73 +60,236 @@ def _arrival_data(result):
     raise AssertionError("Generator result must expose generated arrival data")
 
 
-def _scenario(config, name):
+def _scenario_name(result: Any) -> str:
+    """Extract scenario_name from a result object or dict."""
+    if hasattr(result, "scenario_name"):
+        return result.scenario_name
+    if isinstance(result, dict) and "scenario_name" in result:
+        return result["scenario_name"]
+    raise AssertionError("Generator result must expose scenario_name")
+
+
+def _slots(result: Any) -> List[str]:
+    """Extract slot labels from a result object or dict."""
+    if hasattr(result, "slots"):
+        return result.slots
+    if isinstance(result, dict) and "slots" in result:
+        return result["slots"]
+    raise AssertionError("Generator result must expose slots")
+
+
+def _scenario_dict(config: Dict[str, Any], name: str) -> Dict[str, Any]:
     scenario = deepcopy(config)
     scenario["scenario_name"] = name
     return scenario
 
 
-def _flatten_counts(arrivals):
+def _flatten_counts(arrivals: Any) -> List[float]:
     if isinstance(arrivals, dict):
         values = arrivals.values()
     else:
         values = arrivals
 
-    flattened = []
+    flattened: List[float] = []
     for value in values:
         if isinstance(value, dict):
             flattened.extend(_flatten_counts(value))
         elif isinstance(value, (list, tuple)):
             flattened.extend(_flatten_counts(value))
         else:
-            flattened.append(value)
+            flattened.append(float(value))
     return flattened
 
 
+# ===========================================================================
+# 1. NORMAL / PEAK / SURGE
+#    - valid supported scenarios are accepted
+#    - generated results identify the correct scenario
+# ===========================================================================
+
+@pytest.mark.parametrize("scenario_name", ["normal", "peak", "surge"])
+def test_supported_scenarios_accepted_and_identified(scenario_name: str):
+    """Supported scenarios (normal, peak, surge) are accepted and identify the scenario."""
+    # Test with dict configuration
+    config = _scenario_dict(BASE_CONFIG, scenario_name)
+    res_dict = generate(config)
+    assert _scenario_name(res_dict) == scenario_name
+
+    # Test with domain model ScenarioConfig
+    canonical_cfg = get_scenario(scenario_name, seed=42)
+    res_model = generate(canonical_cfg)
+    assert _scenario_name(res_model) == scenario_name
+
+
+# ===========================================================================
+# 2. DETERMINISM
+#    - identical configuration + identical seed produces identical output
+# ===========================================================================
+
 def test_same_seed_and_scenario_are_deterministic():
+    """Identical configuration + identical seed produces identical arrival output."""
     first = generate(deepcopy(BASE_CONFIG))
     second = generate(deepcopy(BASE_CONFIG))
 
     assert _arrival_data(first) == _arrival_data(second)
+    assert _slots(first) == _slots(second)
 
 
-def test_surge_has_higher_arrival_demand_than_normal():
-    normal = generate(_scenario(BASE_CONFIG, "normal"))
-    surge = generate(_scenario(BASE_CONFIG, "surge"))
+@pytest.mark.parametrize("scenario_name", ["normal", "peak", "surge"])
+def test_all_supported_scenarios_are_deterministic(scenario_name: str):
+    """Determinism holds across all canonical scenarios with fixed seed."""
+    cfg1 = get_scenario(scenario_name, seed=123)
+    cfg2 = get_scenario(scenario_name, seed=123)
 
-    normal_total = sum(_flatten_counts(_arrival_data(normal)))
-    surge_total = sum(_flatten_counts(_arrival_data(surge)))
+    first = generate(cfg1)
+    second = generate(cfg2)
 
-    assert surge_total > normal_total
+    assert _arrival_data(first) == _arrival_data(second)
 
 
-def test_generation_covers_every_horizon_slot():
+# ===========================================================================
+# 3. DEMAND BEHAVIOR
+#    - surge demand is higher than normal according to documented behavior
+#    - do not invent numerical thresholds that are not specified by project
+# ===========================================================================
+
+def test_surge_demand_is_higher_than_normal():
+    """Surge scenario produces higher total demand and higher peak slot arrivals than normal."""
+    normal = generate(_scenario_dict(BASE_CONFIG, "normal"))
+    surge = generate(_scenario_dict(BASE_CONFIG, "surge"))
+
+    normal_arrivals = _arrival_data(normal)
+    surge_arrivals = _arrival_data(surge)
+
+    normal_total = sum(_flatten_counts(normal_arrivals))
+    surge_total = sum(_flatten_counts(surge_arrivals))
+
+    # Overall volume in surge must exceed normal
+    assert surge_total > normal_total, f"Surge total ({surge_total}) must be > normal ({normal_total})"
+
+    # Acceptance criteria / TC-02: surge has higher arrival rate than normal in at least one window/slot
+    has_higher_slot = any(
+        any(s > n for s, n in zip(surge_arrivals[qid], normal_arrivals[qid]))
+        for qid in normal_arrivals
+    )
+    assert has_higher_slot, "Surge arrivals must exceed normal in at least one slot"
+
+
+# ===========================================================================
+# 4. TIME HORIZON
+#    - output contains the required 15-minute slots
+#    - verify the documented 09:00-17:00 horizon
+#    - follow the repository's actual interpretation of the end time
+# ===========================================================================
+
+def test_generation_covers_documented_time_horizon():
+    """09:00-17:00 horizon with 15-minute slots yields 32 slots from 09:00 to 16:45."""
     result = generate(deepcopy(BASE_CONFIG))
+    slots = _slots(result)
     arrivals = _arrival_data(result)
 
-    # Contract: every queue must have one value for every 15-minute slot.
-    expected_slots = (17 - 9) * 60 // BASE_CONFIG["slot_minutes"]
-    assert expected_slots == 32
+    expected_slot_count = (17 - 9) * 60 // BASE_CONFIG["slot_minutes"]
+    assert expected_slot_count == 32
+    assert len(slots) == expected_slot_count
 
-    assert set(arrivals) == {q["queue_id"] for q in BASE_CONFIG["queues"]}
+    # Repository interpretation of 09:00-17:00: slots start at 09:00 and end at 16:45 (last 15m period)
+    assert slots[0] == "09:00"
+    assert slots[-1] == "16:45"
+
+    # Verify each queue has exactly one arrival count per slot
+    expected_queues = {q["queue_id"] for q in BASE_CONFIG["queues"]}
+    assert set(arrivals.keys()) == expected_queues
     for queue_id in arrivals:
-        assert len(arrivals[queue_id]) == expected_slots
+        assert len(arrivals[queue_id]) == expected_slot_count
 
+
+def test_slot_labels_helper_matches_horizon():
+    """generate_slot_labels correctly formats 15-minute intervals."""
+    labels = generate_slot_labels(BASE_CONFIG)
+    assert len(labels) == 32
+    assert labels[0] == "09:00"
+    assert labels[1] == "09:15"
+    assert labels[-1] == "16:45"
+
+
+# ===========================================================================
+# 5. DATA VALIDITY
+#    - arrival counts are never negative
+#    - output follows the documented ForecastResult / data structure
+# ===========================================================================
 
 def test_generated_arrivals_are_non_negative():
+    """Arrival counts across all queues and slots must be non-negative."""
     result = generate(deepcopy(BASE_CONFIG))
     counts = _flatten_counts(_arrival_data(result))
 
-    assert counts
-    assert all(isinstance(value, (int, float)) for value in counts)
-    assert all(value >= 0 for value in counts)
+    assert len(counts) > 0
+    assert all(isinstance(val, (int, float)) for val in counts)
+    assert all(val >= 0 for val in counts)
 
 
-@pytest.mark.parametrize("scenario", ["normal", "peak", "surge"])
-def test_supported_scenarios_are_seed_reproducible(scenario):
-    config = _scenario(BASE_CONFIG, scenario)
+def test_output_conforms_to_forecast_result_contract():
+    """Generated result adheres to the ForecastResult contract structure."""
+    result = generate(deepcopy(BASE_CONFIG))
 
-    first = generate(deepcopy(config))
-    second = generate(deepcopy(config))
+    # Validate against ForecastResult structure
+    if isinstance(result, ForecastResult):
+        assert isinstance(result.scenario_name, str)
+        assert isinstance(result.slots, list)
+        assert isinstance(result.expected_arrivals, dict)
+    else:
+        assert "scenario_name" in result
+        assert "slots" in result
+        assert "expected_arrivals" in result
 
-    assert _arrival_data(first) == _arrival_data(second)
+    slots = _slots(result)
+    arrivals = _arrival_data(result)
+    for qid, counts in arrivals.items():
+        assert len(counts) == len(slots), f"Queue {qid} counts length does not match slots"
+
+
+# ===========================================================================
+# 6. SEED VARIATION
+#    - different seeds produce different deterministic results where variation is permitted
+# ===========================================================================
+
+def test_different_seeds_produce_different_arrivals():
+    """Different random seeds produce distinct deterministic arrival sequences."""
+    cfg_seed_1 = deepcopy(BASE_CONFIG)
+    cfg_seed_1["seed"] = 42
+
+    cfg_seed_2 = deepcopy(BASE_CONFIG)
+    cfg_seed_2["seed"] = 999
+
+    res_1 = generate(cfg_seed_1)
+    res_2 = generate(cfg_seed_2)
+
+    assert _arrival_data(res_1) != _arrival_data(res_2)
+
+
+# ===========================================================================
+# 7. INVALID INPUT
+#    - invalid scenario names are rejected if project's contract specifies validation
+# ===========================================================================
+
+def test_invalid_scenario_name_rejected():
+    """Passing an invalid scenario name raises validation error per contract."""
+    invalid_cfg = deepcopy(BASE_CONFIG)
+    invalid_cfg["scenario_name"] = "unsupported_scenario"
+
+    with pytest.raises((ValidationError, ValueError)):
+        generate(invalid_cfg)
+
+
+def test_invalid_scenario_model_rejected():
+    """Constructing ScenarioConfig with invalid scenario name raises ValidationError."""
+    with pytest.raises(ValidationError):
+        ScenarioConfig(
+            scenario_name="invalid_scenario",
+            seed=42,
+            horizon_start="09:00",
+            horizon_end="17:00",
+            slot_minutes=15,
+            queues=BASE_CONFIG["queues"],
+            total_staff_available=10,
+        )
