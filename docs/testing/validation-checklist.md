@@ -12,6 +12,7 @@
 - [x] KIRAN-003 API integration validated: `tests/test_api.py` **40/40**, related pipeline/optimization tests **71/71**, full suite at merge point **220/220**.
 - [x] Safe 500 responses do not expose internal exception details.
 - [x] `git diff --check` clean on the KIRAN-003 validation.
+- [x] REETHU-P8 end-to-end integration suite: **19/19 passed**.
 
 ## Performance and decision-quality validation
 - [x] Seed-42 average end-to-end runtime measured by Karthi: **13.7 ms Normal, 16.5 ms Peak, 32.0 ms Surge** (5 runs each).
@@ -26,6 +27,7 @@
 - [ ] All final dashboard data paths use live FastAPI responses; no mock data remains in the demo path.
 - [ ] Scenario selector works for Normal / Peak / Surge against the real backend.
 - [ ] Dashboard shows forecast, baseline vs optimized results, waiting/overload/backlog/utilization metrics, improvement, recommendation/explanation, and supported what-if results.
+- [ ] Frontend-visible metrics are cross-checked against actual backend responses.
 - [ ] Full demo rehearsed at least twice, preferably by two different people.
 - [ ] Clean-clone setup and demo path verified.
 - [ ] Backup demo path prepared only if permitted by the official event rules.
@@ -37,3 +39,6 @@
 - [x] No known backend defect remains from the latest integration validation.
 - [ ] Final submitted version is frozen and matches the rehearsed/presented version.
 - [ ] Official event-specific submission/presentation requirements have been checked against the authoritative organizer rules.
+
+## Current release status
+Backend/API automated validation is complete and green. The final release gate remains **OPEN** until the dashboard is fully integrated and the browser, clean-clone, and rehearsal checks above are actually verified. Do not claim final QA sign-off before those checks are evidenced.
