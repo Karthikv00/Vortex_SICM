@@ -1,147 +1,106 @@
 # AAVISHKARA-26 — ChatGPT Orchestration State
 
-> **ChatGPT-only state.** This file is for orchestration across conversations, not coding instructions. Coding agents must follow the user's task, official event rules/problem statement, `AGENTS.md`, `AI_INSTRUCTIONS.md`, project docs, and existing code.
+> **ChatGPT-only state.** This file is orchestration context, not coding instructions. Coding agents must follow the user's task, official event rules/problem statement, `AGENTS.md`, `AI_INSTRUCTIONS.md`, project docs, and existing code.
 
-## 1. Event constraints
-- Hackathon: AAVISHKARA-26.
-- Official event: 2026-09-09 10:00 → 2026-09-10 14:00.
-- Development starts: 2026-09-09 13:30.
-- Judging-version freeze: 2026-09-10 07:00. No team-initiated modification after freeze.
-- Presentation: 09:00–12:30; target ~10–12 min: 5 min PPT + 3 min demo + 2 min Q&A/setup.
-- AI assistance, internet, GitHub, external APIs/cloud, and open-source libraries are allowed; AI usage must be disclosed.
-- Only registered team members may contribute technical work.
+## 1. Event and compliance
+- Hackathon: AAVISHKARA-26; problem **JP-012 — Customer Arrival Queue Simulation & Resource Allocation Optimizer**.
+- Team: Kiran, Karthi, Reethu, Deepansha.
+- Event schedule documented by the project: 2026-09-09 10:00 → 2026-09-10 14:00; development from 13:30; judging-version freeze 2026-09-10 07:00; presentation window 09:00–12:30.
+- Official problem statement/rules have highest authority. AI-assisted development is permitted only within those rules; registered team members remain responsible for understanding and validating submitted code.
+- Synthetic data only. No fabricated/cherry-picked metrics. No secrets/credentials. Final submission must be reproducible from a clean clone.
+- Do not assume event-specific exceptions such as backup recordings or submission formats unless confirmed by the authoritative organizer rules.
 
-## 2. Team / collaboration
-- Registered members: Kiran, Karthi, Reethu, Deepansha.
-- All four can work simultaneously on the same GitHub repository and have their own laptops.
-- Team is beginner-level; instructions and interfaces must be concrete and independently verifiable.
-- Do not infer identity/ownership from names or roles when delegating to coding agents.
+## 2. Product
+Vortex SICM is a deterministic bank-branch operations decision-support dashboard, not an autonomous agent and not merely a queue simulator.
 
-## 3. Selected problem
-**JP-012 — Customer Arrival Queue Simulation & Resource Allocation Optimizer**
+Core loop:
+`synthetic data → demand forecast → queue simulation → resource allocation → baseline comparison → explainable recommendation → what-if result`
 
-Domain: **bank branch operations**.
+P0 requires multiple queues, Normal/Peak/Surge, forecast, waiting metrics, constrained allocation, baseline comparison, overload detection, explainable recommendation, what-if, and a clear dashboard.
 
-Required outcome:
-`arrival/service data → demand prediction → multiple queues → waiting-time estimation → resource allocation → overload detection → baseline comparison → explainable recommendation`.
+## 3. Technical source of truth
+- Backend/source-of-truth logic: Python + FastAPI.
+- Core forecasting, simulation, optimization, constraints, and KPIs must work deterministically without an LLM.
+- Frontend visualizes backend results; it must not duplicate business logic.
+- Keep scope narrow: no auth/RBAC, microservices, real bank integrations, complex infrastructure, deep-learning-heavy forecasting, or autonomous agents before P0 is stable.
 
-Hard requirements to preserve:
-- resource limits/constraints
-- peak-load demonstration
-- explainable recommendation logic
-- comparison with a basic allocation strategy
-- measurable waiting-time improvement
+## 4. Repository
+Repo: `Kiran-official/Vortex_SICM`; default branch: `main`.
 
-## 4. Product decision
-Working concept: **bank branch operations decision-support dashboard**.
-Primary user: branch operations manager.
+Latest main integration commit after the current docs-sync branch is based on: `6a18af086733636f410539a72b2ba8ea4fb65a46`.
 
-Purpose: forecast synthetic customer demand, simulate multiple queues, evaluate limited staffing, compare basic and optimized feasible allocations, explain the recommendation, and support what-if analysis.
+The repository contains the planning pack, backend implementation, tests, and active frontend work.
 
-Demo story:
-1. Show current branch state.
-2. Select normal/peak/surge scenario.
-3. Predict demand and identify overload.
-4. Recommend feasible staff/resource reallocation.
-5. Run what-if simulation.
-6. Compare baseline vs optimized metrics.
-7. Explain the recommendation and constraints.
+## 5. Completed work
+- PR #1 — shared planning/specification pack synced to GitHub.
+- PR #3 — product purpose and AI governance clarified.
+- PR #4 — KIRAN-001 optimization sizing benchmark/scoring validation; ADR-004 benchmark.
+- PR #5 — KARTHI-001 deterministic synthetic data and Normal/Peak/Surge scenarios.
+- PR #6 — REETHU-001 generator validation tests.
+- PR #7 — KARTHI-002 domain model validation hardening.
+- PR #8 — deterministic API/explanation validation and contract hardening.
+- PR #9 — centralized API allocation validation.
+- PR #10 — KARTHI-003 simulation validation hardening.
+- PR #11 — REETHU-003 demo scenario validation.
+- PR #13 — KARTHI-004 demand forecasting completion/hardening.
+- PR #14 — explanation-weight alignment/regression coverage.
+- PR #15 — REETHU-002 forecast/simulation edge-case validation.
+- PR #16 — KIRAN-002 transport-independent DecisionPipeline/domain validation.
+- PR #17 — REETHU-004 documentation/code-drift reconciliation.
+- PR #18 — KARTHI-005 safe FastAPI error handling.
+- PR #19 — REETHU-P8 pre-demo end-to-end integration validation and checklist.
+- PR #20 — KIRAN-003 API + DecisionPipeline integration hardening.
 
-The product is **not** merely a queue simulator and not an autonomous agent.
+PR #12 was an earlier explanation-weight alignment attempt that was not merged; the intended change was completed through PR #14.
 
-## 5. Technical decisions
-- Python required for backend/simulation/optimization/data work.
-- FastAPI is the preferred backend.
-- Frontend should use the repository's selected web stack; avoid framework changes without a concrete reason.
-- Deterministic/stochastic simulation + transparent constraint/scoring logic are the source of truth.
-- Forecasting should be simple and explainable; synthetic data is acceptable.
-- LLM use is optional and limited to explanation/UX assistance. Core forecasts, queue metrics, constraints, and allocation decisions must work without an LLM.
-- MVP database/persistence is optional; do not add it unless it materially improves the demo.
+## 6. Latest validated state
+### Karthi — KARTHI-006
+Reported complete:
+- 231/231 backend tests passed.
+- Normal/Peak/Surge end-to-end pipelines verified.
+- 15/15 determinism checks passed.
+- Demand ordering verified.
+- Hard staff constraints verified.
+- Invalid queue IDs, negative staff/arrivals, incompatible forecasts, malformed scenarios, and infeasible allocations rejected.
+- Optimized allocations validated through the real simulator.
+- Five-run seed-42 average end-to-end runtime: 13.7 ms Normal, 16.5 ms Peak, 32.0 ms Surge.
+- FastAPI/error-handling: 32/32 passed.
+- No confirmed backend defect; no code changes required.
 
-## 6. Scope priority
-### P0 — must work
-- multiple bank service queues
-- synthetic arrival/service data
-- normal/peak/surge scenarios
-- demand forecast
-- queue simulation + waiting metrics
-- feasible resource allocation optimization
-- baseline fixed/basic allocation
-- before/after comparison
-- explainable recommendation
-- interactive what-if result
-- clear operations dashboard
+### Reethu — REETHU-P8
+PR #19 merged. 19/19 focused integration tests and 231/231 full-suite tests passed at its merge point. Coverage includes live FastAPI demo flow, Normal/Peak/Surge, DecisionPipeline determinism, API-boundary errors, performance SLAs, and what-if trade-offs.
 
-### P1 — only after P0 is stable
-- adjustable parameters
-- scenario persistence
-- richer appointments
-- staff skill compatibility
-- CSV import
+### Kiran — KIRAN-003
+PR #20 merged. `POST /api/optimize` is wired through the real DecisionPipeline; forecast compatibility, structured 422 validation, safe 500 handling, Normal/Peak/Surge API integration, deterministic repeatability, and baseline-vs-optimized response structure are covered. Merge-point results: 40/40 API tests, 71/71 related pipeline/optimization tests, 220/220 full suite, clean `git diff --check`.
 
-### Avoid unless P0 is finished and there is a demonstrated need
-- authentication/RBAC
-- microservices
-- real bank integrations/customer data
-- complex cloud infrastructure
-- deep-learning-heavy forecasting
-- autonomous operational agents
+## 7. Team state
+### Karthi
+All implementation tasks KARTHI-001..006 are complete. Integration/performance support only unless a confirmed P0 defect appears.
 
-## 7. Repository
-Repo: `Kiran-official/Vortex_SICM`, default branch `main`.
+### Kiran
+KIRAN-001..004 are complete. Current role is integration support and API/decision-layer hardening only. Do not alter algorithms without evidence/team review.
 
-Current repository contains the shared planning pack plus a foundation implementation covering data generation, domain models, forecasting, simulation, optimization, FastAPI routes, and tests. The frontend remains the major product-surface dependency.
+### Reethu
+REETHU-001..004 and P8 are complete. Current role is final integrated QA/release gate: dashboard validation, full regression, clean clone, demo rehearsal, metric traceability, and blocker classification.
 
-## 8. Agent/instruction state
-- `AGENTS.md`: repository coding-agent policy, competition timing/new-project restrictions, AI/human responsibility, engineering rules, P0 scope, testing, integration, and handoff requirements.
-- `AI_INSTRUCTIONS.md`: AI coding-assistant-specific behavior, competition guardrails, AI disclosure/human validation requirements, deterministic-core rules, testing, and change discipline.
-- `docs/engineering-rules.md`: team workflow, competition integrity, product engineering, and coordination rules.
-- `docs/README.md`: documentation map, authority model, and AI instruction boundary.
-- `.chatgpt/HACKATHON_CONTEXT.md`: orchestration state only; not coding guidance.
+### Deepansha
+Dashboard work is the remaining primary implementation path. DEEPANSHA-003 is real FastAPI → dashboard integration and demo polish. No mock data in final/demo path.
 
-## 9. Current implementation state
-- Planning specification pack: synced to `main`.
-- Foundation implementation: present on `main`.
-- Optimization implementation present: `backend/optimization/baseline.py`, `optimizer.py`, `explain.py`.
-- Optimization tests present: `tests/test_optimization.py`.
-- Simulation implementation present: `backend/simulation/engine.py`.
-- API implementation present: `backend/main.py` and `backend/routes/`.
-- Frontend implementation state must be checked before planning frontend-dependent work.
-- Local execution/test status has **not** been independently verified in this ChatGPT session; do not claim the current suite passes.
+## 8. Current remaining work
+1. Deepansha: connect scenario controls to the real API; display real forecast, baseline/optimized metrics, overload/backlog/utilization, improvement, explanation/recommendation, and supported what-if; implement loading/error/empty/retry states.
+2. Reethu: validate the integrated dashboard, rerun full tests, clean-clone setup, rehearse demo, and sign off release readiness.
+3. Kiran/Karthi: support integration blockers only; avoid new backend features.
 
-## 10. Immediate Kiran task
-**KIRAN-001 — Enumeration sizing benchmark + scoring validation.**
+## 9. Demo
+Intended story:
+`normal → surge → forecast spike → overload → optimize → recommendation → measured before/after → explanation → what-if`
 
-Kiran should:
-1. Pull/re-read current `main`.
-2. Run existing optimization tests.
-3. Benchmark real normal/peak/surge scenarios.
-4. Measure feasible allocation count, simulation runtime, optimizer runtime, baseline/optimized metrics, and constraint compliance.
-5. Verify deterministic output.
-6. Confirm the documented `<3 second` optimization target for intended MVP sizing.
-7. Update ADR-004 with actual measurements.
-8. Fix concrete defects discovered by tests/benchmark only.
+Existing real validation evidence includes 14.1% Normal wait reduction, 48.7% Peak wait reduction, and verified Surge capacity-expansion relief. Never hard-code or manually manufacture these or any other KPI.
 
-Do not fabricate or cherry-pick favorable metrics. If execution is unavailable, record that verification was not performed.
+## 10. Synchronization protocol
+The repository is the implementation source of truth. Before substantive project actions, inspect current `main` and recent PRs when changes may have occurred. Update this file and relevant docs when project state changes. Do not assume old conversation context overrides GitHub state.
 
-## 11. Synchronization protocol
-The repository is the source of truth for implementation state. This file is the source of truth for ChatGPT's cross-conversation orchestration state.
+For task handoffs use: STARTED → READY FOR REVIEW → BLOCKED → INTEGRATION READY → DONE.
 
-Before every substantive project response/action, re-check current repository state when repository changes may have occurred. Do not rely on an old snapshot of code or file contents.
-
-When another team member/agent makes changes:
-1. Inspect current `main` state and recent commits/diffs.
-2. Determine what changed and whether architecture/interfaces/tests are affected.
-3. Update this file's project state/decisions/risks as needed.
-4. Only then plan or implement the next change.
-
-This synchronization cannot be triggered invisibly by GitHub changes between messages. If a change happens outside the current interaction, the next project interaction must begin with a repository re-sync; never assume the previous context is still current.
-
-## 12. Decision discipline
-For every feature, ask:
-- Does it directly improve the JP-012 judging outcome?
-- Is it necessary for the P0 demo path?
-- Can it be deterministic, explainable, and tested?
-- Does it introduce avoidable integration risk for four concurrent contributors?
-
-Prefer a smaller complete system over a larger incomplete system.
+## 11. Decision discipline
+Prefer the smallest complete, reproducible, explainable P0 system. Every change must preserve contracts, deterministic behavior, real measured evidence, and team ownership/compliance.

@@ -1,24 +1,48 @@
 # Execution PRD — Deepansha
 
 ## Responsibility
-Frontend/dashboard, UI states, visualization, UX implementation.
+Frontend/dashboard, UI states, visualization, UX implementation, and real backend integration.
 
-## Deliverables
-- `DEEPANSHA-001` Dashboard shell + mock data layer.
-- `DEEPANSHA-002` Full dashboard per `design/dashboard-spec.md`.
-- `DEEPANSHA-003` Real backend integration + demo polish.
+## Completed/planned deliverables
+- `DEEPANSHA-001` Dashboard shell + initial mock data layer. *(Foundation/active integration work)*
+- `DEEPANSHA-002` Full dashboard per approved design, including loading/empty/error states. *(Active)*
+- `DEEPANSHA-003` Real FastAPI integration + demo polish. *(Current priority)*
 
-## Interfaces depended on
-`architecture/api-contract.md` and `architecture/data-model.md`; real API only from `KARTHI-005` onward.
+## Backend integration baseline
+The backend is now ready for real consumption. Latest main includes KIRAN-003 API/DecisionPipeline hardening (PR #20) and Reethu's pre-demo integration validation (PR #19). Karthi reports 231/231 backend tests passing, deterministic Normal/Peak/Surge pipelines, hard-constraint validation, real-simulator optimizer validation, and sub-50 ms average end-to-end runtimes for the canonical scenarios.
 
-## Interfaces provided
-The dashboard and mock layer, which also validates that the shared API contract is usable.
+The dashboard must consume the existing API/data contracts rather than reproduce backend logic.
 
-## Acceptance criteria
-FR-UI-1 through FR-UI-7 and the dashboard spec section-by-section.
+## DEEPANSHA-003 current objective
+Replace all final/demo mock or hard-coded result paths with real FastAPI responses.
 
-## Integration strategy
-Build against mocks before backend is ready. At P7 swap mocks for real API. If the real API requires shape changes, treat that as a contract/documentation defect rather than silently patching the frontend.
+Required flow:
+`dashboard controls → FastAPI → DecisionPipeline → real result → dashboard visualization`
 
-## Critical UI requirements
-All 9 sections must exist, including explicit loading/empty/error states. No placeholder data should remain in the live demo.
+Required visible results:
+- scenario selection: Normal / Peak / Surge
+- real forecast output
+- baseline vs optimized allocation/results
+- waiting-time metrics
+- overload/backlog/utilization metrics where supplied by the API
+- measured before/after improvement
+- deterministic recommendation/explanation
+- what-if result through the real backend where supported
+
+Required UI states:
+- loading
+- successful result
+- API/server error
+- invalid/empty result
+- retry/recovery path
+
+## Integration rules
+- No mock data in the final/demo execution path.
+- Do not put simulation, forecasting, optimization, or KPI calculations in frontend code.
+- Reuse the current API/data contracts. If a required response field is missing, coordinate with Kiran rather than silently inventing a frontend calculation.
+- Verify locally against a running FastAPI instance using real responses.
+- Keep the demo story focused: **problem → forecast → bottleneck → recommendation → measurable impact → what-if**.
+- Avoid unnecessary frontend architecture changes.
+
+## Current acceptance gate
+A judge must be able to select a scenario and see real backend-generated forecast, simulation, optimization, comparison, and explanation results without changing code or injecting data. Reethu's integrated QA/clean-clone validation follows once the real dashboard path is ready.

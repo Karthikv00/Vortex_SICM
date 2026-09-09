@@ -1,57 +1,38 @@
 # Execution PRD — Kiran
 
 ## Responsibility
-Optimization and product/AI direction, decision logic, explainability, and backend integration support.
+Optimization, decision logic, explainability, and backend/API integration hardening.
 
-## Deliverables
-- `KIRAN-001` Optimization sizing benchmark + scoring validation.
-- `KIRAN-002` Enumeration/scoring/tie-break optimizer.
-- `KIRAN-003` Deterministic explanation generation.
-- `KIRAN-004` Baseline allocation strategy + what-if logic.
+## Completed deliverables
+- `KIRAN-001` Optimization sizing benchmark + scoring validation. *(Completed & merged — PR #4)*
+- `KIRAN-002` End-to-end deterministic DecisionPipeline integration. *(Completed & merged — PR #16)*
+- `KIRAN-003` API + DecisionPipeline integration hardening. *(Completed & merged — PR #20)*
+- `KIRAN-004` Baseline allocation, comparison, explanation, and what-if behavior. *(Completed & merged; explanation-weight alignment merged via PR #14.)*
 
-## Current repository state
-The current `main` branch already contains implementations for `KIRAN-002`, `KIRAN-003`, and `KIRAN-004` under `backend/optimization/`, plus optimization tests under `tests/test_optimization.py`.
+## KIRAN-003 implementation outcome
+The FastAPI optimization surface now exercises the real decision pipeline rather than a duplicated route-level flow. The integration validates the request → forecast → DecisionPipeline → serialization path and preserves the documented API error behavior.
 
-These implementations must not be treated as fully complete merely because the files exist. Their next gate is measured validation against the current real simulation engine and the official performance/acceptance requirements.
+Key outcomes:
+- `POST /api/optimize` is wired through `DecisionPipeline`.
+- Caller-supplied forecast remains supported while forecast generation can be performed by the pipeline path.
+- `OptimizationResult` carries the forecast needed by the integrated consumer.
+- Structured 422 validation is preserved for invalid inputs.
+- Global/forecast internal failures return safe structured 500 responses without leaking exception details.
+- API integration tests cover Normal/Peak/Surge execution, deterministic repeatability, baseline-vs-optimized response structure, invalid scenarios, and safe internal-error handling.
+- PR #20 validation: `tests/test_api.py` 40/40 passed; related pipeline/optimization tests 71/71 passed; full suite at that point 220/220 passed; `git diff --check` clean.
 
-## Immediate next task — KIRAN-001
+## Current integrated state
+The backend is no longer in feature-development mode. Karthi's latest integration/performance validation reports **231/231 tests passed**, Normal/Peak/Surge end-to-end success, 15/15 determinism checks, hard-constraint compliance, real-simulator optimizer validation, and average end-to-end runtimes of 13.7 ms (Normal), 16.5 ms (Peak), and 32.0 ms (Surge). No confirmed backend defect required a code change.
 
-**Goal:** benchmark and validate the existing optimization path using the real implementation.
+Reethu's pre-demo integration suite (PR #19) is also merged and covers the live API demo flow, determinism, API-boundary error handling, performance SLAs, and what-if tradeoffs.
 
-### Do this next
-1. Pull/re-read current `main` before editing.
-2. Run the existing optimization tests and record the exact result.
-3. Run the real optimizer against deterministic normal, peak, and surge scenarios.
-4. Measure:
-   - number of feasible allocations evaluated
-   - optimizer runtime
-   - representative simulation runtime
-   - baseline score
-   - optimized score
-   - average wait before/after
-   - p95 wait before/after
-   - overloaded slots before/after
-   - any end-of-horizon backlog difference
-5. Verify hard constraints for the selected allocation.
-6. Verify deterministic output across repeated runs.
-7. Check whether the current optimizer satisfies the documented `<3 second` optimization target for the intended MVP sizing.
-8. Update `docs/decisions/ADR-004-optimization-strategy.md` with measured numbers and conclusion.
-9. Fix only concrete defects discovered by the benchmark/tests; do not redesign the optimizer spec without evidence.
-
-### Important
-Do not fabricate or cherry-pick favorable metrics. Record actual measurements. If the environment prevents execution, report that verification was not performed.
-
-## Interfaces depended on
-`SimulationResult` from Karthi's simulation engine; `ScenarioConfig` and `ForecastResult` contracts.
-
-## Interfaces provided
-`optimize(scenario, forecast) -> OptimizationResult` and deterministic explanation generation used by the optimization result.
-
-## Acceptance criteria
-FR-OPT-1 through FR-OPT-5, FR-EXP-1/2, and FR-WHATIF baseline strategy requirements.
+## Current responsibility
+Support Deepansha's real API → dashboard integration and resolve only genuine contract/integration blockers. Do not add new backend features or change optimization/simulation/forecast algorithms unless a confirmed P0 integration defect requires it and the team reviews the change.
 
 ## Critical rules
-- Do not treat optimizer results as correct until validated against the real simulation engine.
-- Explanations must be generated from actual computed numbers.
-- Benchmark enumeration against real implementation counts and keep the optimization path under the documented 3-second target for the intended MVP sizing.
 - Hard resource constraints must always be enforced.
+- Explanations must be generated from actual computed metrics.
+- Optimization claims must be validated against the real simulator.
+- Deterministic seeded behavior is mandatory.
+- No fabricated/cherry-picked metrics, mock data in the final demo path, secrets, or real customer data.
+- Keep API contracts synchronized with implementation.
