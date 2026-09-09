@@ -333,3 +333,97 @@ def test_global_server_error_uses_safe_structured_response(monkeypatch):
         }
     }
     assert "secret global implementation detail" not in response.text
+
+
+# ---------------------------------------------------------------------------
+# KIRAN-003: API + Decision Pipeline Integration Hardening Tests
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize("scenario_name", ["normal", "peak", "surge"])
+def test_optimize_endpoint_executes_complete_pipeline_for_canonical_scenarios(scenario_name):
+    """KIRAN-003: Verify /api/optimize supports canonical scenarios without requiring pre-computed forecast."""
+    sc_resp = client.post("/api/scenario/generate", json={"scenario_name": scenario_name, "seed": 42})
+    assert sc_resp.status_code == 200
+    scenario = sc_resp.json()["scenario"]
+
+    # Call /api/optimize with only scenario (pipeline auto-forecasts)
+    resp = client.post("/api/optimize", json={"scenario": scenario})
+    assert resp.status_code == 200
+    data = resp.json()
+
+    # Complete contract fields present
+    assert data["feasible"] is True
+    assert data["scenario_name"] == scenario_name
+    assert "baseline" in data
+    assert "optimized" in data
+    assert "score_breakdown" in data
+    assert "improvement" in data
+    assert "explanation" in data
+    assert "forecast" in data
+    assert data["forecast"] is not None
+    assert set(data["forecast"]["expected_arrivals"]) == set(q["queue_id"] for q in scenario["queues"])
+
+
+def test_optimize_endpoint_accepts_and_validates_caller_forecast():
+    """KIRAN-003: Verify /api/optimize still supports pre-computed forecasts."""
+    scenario, forecast = _scenario_and_forecast()
+    resp = client.post("/api/optimize", json={"scenario": scenario, "forecast": forecast})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["forecast"] == forecast
+
+
+def test_optimize_endpoint_deterministic_repeatability():
+    """KIRAN-003: Verify repeated requests with same seed produce identical responses."""
+    sc_resp = client.post("/api/scenario/generate", json={"scenario_name": "surge", "seed": 42})
+    scenario = sc_resp.json()["scenario"]
+
+    first = client.post("/api/optimize", json={"scenario": scenario})
+    second = client.post("/api/optimize", json={"scenario": scenario})
+
+    assert first.status_code == 200
+    assert first.json() == second.json()
+
+
+def test_optimize_endpoint_exposes_baseline_vs_optimized_distinction():
+    """KIRAN-003: Verify baseline and optimized allocations are distinct in surge scenario."""
+    sc_resp = client.post("/api/scenario/generate", json={"scenario_name": "surge", "seed": 42})
+    scenario = sc_resp.json()["scenario"]
+
+    resp = client.post("/api/optimize", json={"scenario": scenario})
+    assert resp.status_code == 200
+    data = resp.json()
+
+    base = data["baseline"]
+    opt = data["optimized"]
+    assert base["allocation"]["label"] == "baseline"
+    assert opt["allocation"]["label"] == "optimized"
+    assert base["result"]["allocation_label"] == "baseline"
+    assert opt["result"]["allocation_label"] == "optimized"
+
+
+def test_optimize_endpoint_safe_500_response(monkeypatch):
+    """KIRAN-003: Verify internal exceptions do not leak stack traces or raw details."""
+    def fail_pipeline(*args, **kwargs):
+        raise RuntimeError("database connection failed with password xyz")
+
+    monkeypatch.setattr("backend.routes.optimization.run_decision_pipeline", fail_pipeline)
+
+    sc_resp = client.post("/api/scenario/generate", json={"scenario_name": "normal", "seed": 42})
+    scenario = sc_resp.json()["scenario"]
+
+    resp = client.post("/api/optimize", json={"scenario": scenario})
+    assert resp.status_code == 500
+    assert resp.json() == {
+        "detail": {
+            "error": "optimize_error",
+            "message": "Unable to compute optimization",
+        }
+    }
+    assert "database connection failed" not in resp.text
+    assert "password" not in resp.text
+
+
+def test_optimize_endpoint_invalid_scenario_returns_422():
+    """KIRAN-003: Verify malformed scenario returns structured 422 error."""
+    resp = client.post("/api/optimize", json={"scenario": {"scenario_name": "invalid_name"}})
+    assert resp.status_code == 422
