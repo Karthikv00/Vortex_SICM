@@ -10,17 +10,14 @@ Covers REETHU-003:
 """
 from __future__ import annotations
 
-import re
 import time
 
 import pytest
 
-from backend.forecasting.forecast import forecast
-from backend.main import app
 from backend.models import AllocationPlan
+from backend.forecasting.forecast import forecast
 from backend.optimization.baseline import baseline_allocation
 from backend.optimization.optimizer import W_OVERLOAD, W_UTIL, optimize
-from backend.optimization.explain import explain_result
 from backend.simulation.engine import simulate
 from data.scenarios import get_scenario
 
@@ -54,7 +51,7 @@ def _assert_complete_result(result):
 
 
 def test_demo_pipeline_normal_scenario_complete_flow():
-    scenario, fc, baseline, base_result, result = _pipeline("normal")
+    _, _, _, base_result, result = _pipeline("normal")
     _assert_complete_result(result)
     assert base_result.branch_wide.avg_wait_minutes == pytest.approx(0.0)
     assert result.optimized.result.branch_wide.avg_wait_minutes == pytest.approx(0.0)
@@ -65,7 +62,7 @@ def test_demo_pipeline_normal_scenario_complete_flow():
 
 
 def test_demo_pipeline_peak_scenario_complete_flow():
-    scenario, fc, baseline, base_result, result = _pipeline("peak")
+    _, _, _, base_result, result = _pipeline("peak")
     _assert_complete_result(result)
     assert base_result.branch_wide.avg_wait_minutes == pytest.approx(0.0)
     assert result.optimized.result.branch_wide.avg_wait_minutes == pytest.approx(0.0)
@@ -76,7 +73,7 @@ def test_demo_pipeline_peak_scenario_complete_flow():
 
 
 def test_demo_pipeline_surge_scenario_complete_flow():
-    scenario, fc, baseline, base_result, result = _pipeline("surge")
+    _, _, _, base_result, result = _pipeline("surge")
     _assert_complete_result(result)
     assert base_result.branch_wide.avg_wait_minutes == pytest.approx(93.66, abs=0.01)
     assert base_result.branch_wide.p95_wait_minutes == pytest.approx(153.87, abs=0.01)
@@ -113,17 +110,24 @@ def test_adr004_benchmark_metrics_seed_42(scenario_name, expected):
 
 
 def test_explanation_numbers_match_simulation_results():
-    scenario, _, _, _, result = _pipeline("surge")
+    _, _, _, _, result = _pipeline("surge")
     explanation = result.explanation
     base = result.baseline.result.branch_wide
     opt = result.optimized.result.branch_wide
     improvement = result.improvement
 
-    for value in (base.avg_wait_minutes, base.p95_wait_minutes, base.overloaded_slot_count,
-                  opt.avg_wait_minutes, opt.p95_wait_minutes, improvement.avg_wait_reduction_minutes,
-                  improvement.p95_wait_reduction_minutes, improvement.overloaded_slots_resolved):
-        assert f"{value:.1f}" in explanation or f"{value:d}" in explanation
-    assert scenario.scenario_name.upper() in explanation
+    for value in (
+        base.avg_wait_minutes,
+        base.p95_wait_minutes,
+        base.overloaded_slot_count,
+        opt.avg_wait_minutes,
+        opt.p95_wait_minutes,
+        improvement.avg_wait_reduction_minutes,
+        improvement.p95_wait_reduction_minutes,
+        improvement.overloaded_slots_resolved,
+    ):
+        assert f"{value:.1f}" in explanation or f"{value}" in explanation
+    assert "SURGE" in explanation
     assert str(result.baseline.allocation.staff_by_queue["teller"]) in explanation
 
 
@@ -152,7 +156,14 @@ def test_explanation_weight_constants_match_optimizer_weights():
 def test_surge_whatif_reallocation_demonstrates_tradeoff():
     scenario, fc, _, _, result = _pipeline("surge")
     base_alloc = result.baseline.allocation.staff_by_queue
-    shifted = AllocationPlan(label="whatif", staff_by_queue={"teller": base_alloc["teller"] + 1, "loans": base_alloc["loans"] - 1, "customer_service": base_alloc["customer_service"]})
+    shifted = AllocationPlan(
+        label="whatif",
+        staff_by_queue={
+            "teller": base_alloc["teller"] + 1,
+            "loans": base_alloc["loans"] - 1,
+            "customer_service": base_alloc["customer_service"],
+        },
+    )
     shifted_result = simulate(fc, shifted, _avg_service_times(scenario), scenario.slot_minutes)
     base_loans = result.baseline.result.per_queue["loans"]
     shifted_loans = shifted_result.per_queue["loans"]
@@ -163,15 +174,21 @@ def test_surge_whatif_reallocation_demonstrates_tradeoff():
 def test_whatif_additional_staff_in_surge_relieves_bottleneck():
     scenario, fc, _, _, result = _pipeline("surge")
     base = result.baseline.result
-    extra = AllocationPlan(label="whatif", staff_by_queue={"teller": 4, "loans": 4, "customer_service": 3})
+    extra = AllocationPlan(
+        label="whatif",
+        staff_by_queue={"teller": 4, "loans": 4, "customer_service": 3},
+    )
     extra_result = simulate(fc, extra, _avg_service_times(scenario), scenario.slot_minutes)
     assert extra_result.per_queue["loans"].end_backlog < base.per_queue["loans"].end_backlog
     assert extra_result.branch_wide.total_end_backlog < base.branch_wide.total_end_backlog
 
 
 def test_whatif_understaffing_normal_induces_overload():
-    scenario, fc, _, _, result = _pipeline("normal")
-    minimum = AllocationPlan(label="whatif", staff_by_queue={"teller": 1, "loans": 1, "customer_service": 1})
+    scenario, fc, _, _, _ = _pipeline("normal")
+    minimum = AllocationPlan(
+        label="whatif",
+        staff_by_queue={"teller": 1, "loans": 1, "customer_service": 1},
+    )
     minimum_result = simulate(fc, minimum, _avg_service_times(scenario), scenario.slot_minutes)
     assert minimum_result.branch_wide.overloaded_slot_count > 0
     assert minimum_result.branch_wide.total_end_backlog > 0
@@ -211,7 +228,7 @@ def test_demo_demand_ordering_is_normal_peak_surge():
 
 
 def test_demo_surge_baseline_is_global_optimum_for_seed_42():
-    scenario, fc, _, _, result = _pipeline("surge")
+    _, _, _, _, result = _pipeline("surge")
     assert result.optimized.allocation.staff_by_queue == result.baseline.allocation.staff_by_queue
     assert result.optimized.score == pytest.approx(result.baseline.score, abs=1e-6)
     assert result.improvement.avg_wait_reduction_minutes == pytest.approx(0.0)
