@@ -1,10 +1,23 @@
 """Shared API-boundary validation for scenario-dependent requests."""
 from __future__ import annotations
 
+from typing import Dict, Literal
+
 from fastapi import HTTPException
+from pydantic import BaseModel
 
 from backend.models import AllocationPlan, ForecastResult, ScenarioConfig
 from data.generator import generate_slot_labels
+
+
+class AllocationInput(BaseModel):
+    """API input parsed before scenario-dependent allocation validation."""
+
+    label: Literal["baseline", "optimized", "whatif"]
+    staff_by_queue: Dict[str, int]
+
+    def total_staff(self) -> int:
+        return sum(self.staff_by_queue.values())
 
 
 def validate_forecast(scenario: ScenarioConfig, forecast: ForecastResult) -> None:
@@ -39,7 +52,9 @@ def validate_forecast(scenario: ScenarioConfig, forecast: ForecastResult) -> Non
         )
 
 
-def validate_allocation(scenario: ScenarioConfig, allocation: AllocationPlan) -> None:
+def validate_allocation(
+    scenario: ScenarioConfig, allocation: AllocationPlan | AllocationInput
+) -> None:
     scenario_ids = scenario.queue_ids()
     if set(allocation.staff_by_queue) != set(scenario_ids):
         _invalid(
