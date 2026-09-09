@@ -22,18 +22,19 @@ Use task IDs in commits and Slack `[CHANGE]` posts. Ownership is a responsibilit
 - **REETHU-003:** Demo scenario realism and deterministic validation. *(Completed & merged — PR #11; explanation alignment in PR #14)*
 - **REETHU-004:** Documentation/code-drift reconciliation. *(Completed & merged — PR #17)*
 - **REETHU-P8:** Pre-demo end-to-end integration validation and validation-checklist update. *(Completed & merged — PR #19)*
+- **REETHU-005:** Final QA + acceptance validation: browser/dashboard verification, clean-clone validation, full regression, demo rehearsal, metric traceability, blocker classification, and release sign-off. *(Current release-gate responsibility)*
 
 ## Deepansha — dashboard
 - **DEEPANSHA-001:** Dashboard shell and visualization structure. *(Active integration work)*
 - **DEEPANSHA-002:** Full dashboard per approved design, including loading/empty/error states. *(Active integration work)*
-- **DEEPANSHA-003:** Real FastAPI integration + demo polish. *(Next/active priority; must consume real backend responses and remove final mock/demo data paths.)*
+- **DEEPANSHA-003:** Real FastAPI integration + demo polish. *(Current primary implementation priority; must consume real backend responses and remove final mock/demo data paths.)*
 
 ## Integrated state — 2026-09-09
 The backend P0 path is implemented and validated through the real API surface:
 
 `synthetic data → forecast → simulation → baseline → optimization → comparison → explanation → API → validation`
 
-Latest main includes the merged pre-demo validation work (PR #19) and API decision-pipeline hardening (PR #20). The latest reported backend validation is **231/231 tests passed**. Karthi reports Normal/Peak/Surge end-to-end validation, 15/15 determinism checks, hard-constraint validation, real-simulator optimizer validation, and average end-to-end runtimes of 13.7 ms (Normal), 16.5 ms (Peak), and 32.0 ms (Surge), with no confirmed backend defects.
+Latest merged documentation synchronization is PR #21, merge commit `ad87af1`. The latest reported backend validation is **231/231 tests passed**. Karthi reports Normal/Peak/Surge end-to-end validation, 15/15 determinism checks, hard-constraint validation, real-simulator optimizer validation, and average end-to-end runtimes of 13.7 ms (Normal), 16.5 ms (Peak), and 32.0 ms (Surge), with no confirmed backend defects.
 
 ## Current priorities
 1. **Deepansha:** complete real API → dashboard integration and remove mock data from the final/demo execution path.
