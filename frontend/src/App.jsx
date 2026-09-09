@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import BranchOverview from './components/overview/BranchOverview';
@@ -48,16 +48,14 @@ export default function App() {
   const [activeNav, setActiveNav] = useState('command-center');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  // Ticking command deck clock in footer
-  const [clock, setClock] = useState(() => {
-    const d = new Date();
-    return `2035-09-09 ${d.toTimeString().slice(0, 8)} UTC`;
-  });
+  // Local system clock in footer
+  const [clock, setClock] = useState(() => new Date().toLocaleTimeString());
+
+  const activeScenarioReqRef = useRef(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
-      const d = new Date();
-      setClock(`2035-09-09 ${d.toTimeString().slice(0, 8)} UTC`);
+      setClock(new Date().toLocaleTimeString());
     }, 1000);
     return () => clearInterval(timer);
   }, []);
@@ -73,69 +71,50 @@ export default function App() {
     });
   }, []);
 
-  /**
-   * Derives baseline staffing plan respecting queue constraints and available staff.
-   * Matches backend canonical baseline: teller: 4, loans: 3, customer_service: 3.
-   */
-  const deriveInitialBaseline = (config) => {
-    if (!config?.queues) {
-      return { teller: 4, loans: 3, customer_service: 3 };
-    }
-    const staffByQueue = {};
-    let totalAssigned = 0;
-    config.queues.forEach(q => {
-      const min = q.min_staff || 1;
-      staffByQueue[q.queue_id] = min;
-      totalAssigned += min;
-    });
-    let remaining = (config.total_staff_available || 10) - totalAssigned;
-    const priority = ['teller', 'loans', 'customer_service'];
-    for (const qid of priority) {
-      const q = config.queues.find(item => item.queue_id === qid);
-      if (q && remaining > 0) {
-        const maxAllowed = q.max_staff || 10;
-        const canAdd = Math.min(remaining, maxAllowed - staffByQueue[qid]);
-        staffByQueue[qid] += canAdd;
-        remaining -= canAdd;
-      }
-    }
-    return staffByQueue;
-  };
-
   // Load scenario lifecycle
   const loadScenario = useCallback(async (scName) => {
+    const reqId = ++activeScenarioReqRef.current;
     setLoading(true);
     setError(null);
     setOptimizationResult(null); // Clear stale optimization results on scenario change
     setWhatIfResult(null);
 
     try {
-      // 1. Fetch scenario config
-      const config = await getScenario(scName);
+      // 1. Fetch scenario config and authoritative baseline from backend
+      const scenarioData = await getScenario(scName);
+      if (reqId !== activeScenarioReqRef.current) return;
+      const config = scenarioData.scenario || scenarioData;
       setScenarioConfig(config);
 
       // 2. Fetch forecast
       const fcst = await fetchForecast(config);
+      if (reqId !== activeScenarioReqRef.current) return;
       setForecast(fcst);
 
-      // 3. Setup default baseline allocation derived from actual scenario queue constraints
-      const defaultStaff = deriveInitialBaseline(config);
-      const basePlan = { label: 'baseline', staff_by_queue: defaultStaff };
+      // 3. Obtain authoritative baseline allocation directly from backend response
+      const basePlan = scenarioData.baseline;
+      if (!basePlan) {
+        throw new Error('Backend failed to provide authoritative baseline allocation.');
+      }
       setBaselineAllocation(basePlan);
-      setWhatIfAllocation(defaultStaff);
+      setWhatIfAllocation(basePlan.staff_by_queue);
 
-      // 4. Run baseline simulation
+      // 4. Run baseline simulation with the authoritative baseline
       const baseSim = await simulateAllocation(config, fcst, basePlan);
+      if (reqId !== activeScenarioReqRef.current) return;
       setBaselineResult(baseSim);
 
     } catch (err) {
+      if (reqId !== activeScenarioReqRef.current) return;
       console.error('Failed to load scenario:', err);
       setError({
         error: 'SCENARIO_LOAD_FAILURE',
         message: err.message || 'Could not load branch scenario and forecast projections.'
       });
     } finally {
-      setLoading(false);
+      if (reqId === activeScenarioReqRef.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -304,6 +283,7 @@ export default function App() {
           {/* 5. SECTION 2 — DEMAND FORECAST */}
           <DemandForecast
             forecast={forecast}
+            scenarioConfig={scenarioConfig}
             selectedScenario={selectedScenario}
             loading={loading}
           />
@@ -319,6 +299,7 @@ export default function App() {
             queues={scenarioConfig?.queues}
             baselineAllocation={baselineAllocation}
             baselineResult={baselineResult}
+            totalStaffBudget={scenarioConfig?.total_staff_available || 10}
           />
 
           {/* 8. SECTION 5 — OPTIMIZED ALLOCATION */}
@@ -327,6 +308,7 @@ export default function App() {
             baselineAllocation={baselineAllocation}
             optimizedAllocation={optimizationResult?.optimized?.allocation}
             optimizedResult={optimizationResult?.optimized?.result}
+            totalStaffBudget={scenarioConfig?.total_staff_available || 10}
             onRunOptimization={handleOptimize}
             optimizing={optimizing}
           />
@@ -352,6 +334,7 @@ export default function App() {
           {/* 11. SECTION 8 — OPTIMIZATION REASONING */}
           <ExplanationPanel
             optimizationResult={optimizationResult}
+            totalStaffBudget={scenarioConfig?.total_staff_available || 10}
           />
 
         </main>
@@ -368,7 +351,9 @@ export default function App() {
           <div className="footer-right">
             <span className="footer-clock cyan">LOCAL TIME: {clock}</span>
             <span className="footer-sep">/</span>
-            <span className="footer-status green">SYS STATUS: ONLINE</span>
+            <span className={`footer-status ${serverStatus?.online ? 'green' : 'critical'}`}>
+              SYS STATUS: {serverStatus?.online ? 'ONLINE' : (isLiveApi ? 'OFFLINE' : 'MOCK MODE')}
+            </span>
           </div>
         </footer>
 

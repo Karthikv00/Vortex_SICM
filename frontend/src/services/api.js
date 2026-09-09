@@ -37,35 +37,96 @@ export async function checkHealth() {
 }
 
 /**
- * Load or generate scenario configuration
+async function parseErrorResponse(res, defaultMsg) {
+  try {
+    const err = await res.json();
+    if (err.detail) {
+      if (typeof err.detail === 'object' && err.detail.message) {
+        return err.detail.message;
+      }
+      if (typeof err.detail === 'string') {
+        return err.detail;
+      }
+      if (Array.isArray(err.detail) && err.detail[0]?.msg) {
+        return err.detail.map(d => `${d.loc ? d.loc.join('.') + ': ' : ''}${d.msg}`).join(', ');
+      }
+    }
+    if (err.message) return err.message;
+  } catch (_) {
+    // Non-JSON response
+  }
+  return `${defaultMsg} (HTTP ${res.status})`;
+}
+
+/**
+ * Load or generate scenario configuration along with canonical baseline
  */
 export async function getScenario(scenarioName = 'surge', seed = 42) {
   if (preferRealApi) {
-    const res = await fetch(`${API_BASE}/scenario/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scenario_name: scenarioName, seed })
-    });
+    let res;
+    try {
+      res = await fetch(`${API_BASE}/scenario/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario_name: scenarioName, seed })
+      });
+    } catch (netErr) {
+      throw new Error(`Unable to connect to FastAPI backend at ${API_BASE}/scenario/generate. Please ensure the backend server is running on port 8000.`);
+    }
+
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || `Scenario generation failed with status ${res.status}`);
+      const msg = await parseErrorResponse(res, 'Scenario generation failed');
+      throw new Error(msg);
     }
     const data = await res.json();
-    return data.scenario || data;
+    return {
+      scenario: data.scenario || data,
+      baseline: data.baseline || null
+    };
   }
 
   // Deterministic Mock (only used if explicitly in mock mode)
   await new Promise(r => setTimeout(r, 120)); // Subtle realistic latency
   const sc = SCENARIOS[scenarioName] || SCENARIOS.surge;
   return {
-    scenario_name: sc.scenario_name,
-    seed: sc.seed,
-    horizon_start: sc.horizon_start,
-    horizon_end: sc.horizon_end,
-    slot_minutes: sc.slot_minutes,
-    queues: sc.queues,
-    total_staff_available: sc.total_staff_available
+    scenario: {
+      scenario_name: sc.scenario_name,
+      seed: sc.seed,
+      horizon_start: sc.horizon_start,
+      horizon_end: sc.horizon_end,
+      slot_minutes: sc.slot_minutes,
+      queues: sc.queues,
+      total_staff_available: sc.total_staff_available
+    },
+    baseline: sc.baseline?.allocation || null
   };
+}
+
+/**
+ * Fetch authoritative baseline allocation for a scenario
+ */
+export async function fetchBaseline(scenarioConfig) {
+  if (preferRealApi) {
+    let res;
+    try {
+      res = await fetch(`${API_BASE}/scenario/baseline`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(scenarioConfig)
+      });
+    } catch (netErr) {
+      throw new Error(`Unable to connect to FastAPI backend at ${API_BASE}/scenario/baseline.`);
+    }
+
+    if (!res.ok) {
+      const msg = await parseErrorResponse(res, 'Baseline fetch failed');
+      throw new Error(msg);
+    }
+    return await res.json();
+  }
+
+  const sc = SCENARIOS[scenarioConfig?.scenario_name] || SCENARIOS.surge;
+  return sc.baseline?.allocation || null;
 }
 
 /**
@@ -73,14 +134,20 @@ export async function getScenario(scenarioName = 'surge', seed = 42) {
  */
 export async function fetchForecast(scenarioConfig) {
   if (preferRealApi) {
-    const res = await fetch(`${API_BASE}/forecast`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scenario: scenarioConfig })
-    });
+    let res;
+    try {
+      res = await fetch(`${API_BASE}/forecast`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario: scenarioConfig })
+      });
+    } catch (netErr) {
+      throw new Error(`Unable to connect to FastAPI backend at ${API_BASE}/forecast.`);
+    }
+
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || `Forecast API failed with status ${res.status}`);
+      const msg = await parseErrorResponse(res, 'Forecast API failed');
+      throw new Error(msg);
     }
     return await res.json();
   }
@@ -95,14 +162,20 @@ export async function fetchForecast(scenarioConfig) {
  */
 export async function simulateAllocation(scenarioConfig, forecast, allocation) {
   if (preferRealApi) {
-    const res = await fetch(`${API_BASE}/simulate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scenario: scenarioConfig, forecast, allocation })
-    });
+    let res;
+    try {
+      res = await fetch(`${API_BASE}/simulate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario: scenarioConfig, forecast, allocation })
+      });
+    } catch (netErr) {
+      throw new Error(`Unable to connect to FastAPI backend at ${API_BASE}/simulate.`);
+    }
+
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || `Simulation API failed with status ${res.status}`);
+      const msg = await parseErrorResponse(res, 'Simulation API failed');
+      throw new Error(msg);
     }
     return await res.json();
   }
@@ -117,14 +190,20 @@ export async function simulateAllocation(scenarioConfig, forecast, allocation) {
  */
 export async function optimizeScenario(scenarioConfig, forecast) {
   if (preferRealApi) {
-    const res = await fetch(`${API_BASE}/optimize`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scenario: scenarioConfig, forecast })
-    });
+    let res;
+    try {
+      res = await fetch(`${API_BASE}/optimize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario: scenarioConfig, forecast })
+      });
+    } catch (netErr) {
+      throw new Error(`Unable to connect to FastAPI backend at ${API_BASE}/optimize.`);
+    }
+
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || `Optimizer API failed with status ${res.status}`);
+      const msg = await parseErrorResponse(res, 'Optimizer API failed');
+      throw new Error(msg);
     }
     return await res.json();
   }
@@ -149,14 +228,20 @@ export async function optimizeScenario(scenarioConfig, forecast) {
  */
 export async function simulateWhatIf(scenarioConfig, forecast, allocationPlan, queuesConfig) {
   if (preferRealApi) {
-    const res = await fetch(`${API_BASE}/whatif`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scenario: scenarioConfig, forecast, allocation: allocationPlan })
-    });
+    let res;
+    try {
+      res = await fetch(`${API_BASE}/whatif`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario: scenarioConfig, forecast, allocation: allocationPlan })
+      });
+    } catch (netErr) {
+      throw new Error(`Unable to connect to FastAPI backend at ${API_BASE}/whatif.`);
+    }
+
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || `What-If simulation failed with status ${res.status}`);
+      const msg = await parseErrorResponse(res, 'What-If simulation failed');
+      throw new Error(msg);
     }
     return await res.json();
   }

@@ -115,9 +115,9 @@ export default function Sidebar({
       {/* Pinned Bottom: SYSTEM STATUS */}
       <div className="sidebar-status-block">
         <div className="status-header">SYSTEM STATUS</div>
-        <div className="status-pill-online">
-          <span className="status-dot green pulsing" />
-          <span className="status-text">SYSTEM ONLINE</span>
+        <div className={`status-pill-${serverStatus?.online ? 'online' : 'offline'}`}>
+          <span className={`status-dot ${serverStatus?.online ? 'green pulsing' : (isLiveApi ? 'red' : 'amber')}`} />
+          <span className="status-text">{serverStatus?.online ? 'SYSTEM ONLINE' : (isLiveApi ? 'BACKEND OFFLINE' : 'MOCK ENGINE')}</span>
         </div>
         <div className="api-connectivity-row">
           <span className="api-label">API:</span>

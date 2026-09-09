@@ -1485,6 +1485,11 @@ html, body {
   color: var(--signal-success-text);
   border: 1px solid var(--signal-success-border);
 }
+.impact-delta-pill.neutral {
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--text-secondary);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
 .arrow-down {
   font-weight: 900;
 }

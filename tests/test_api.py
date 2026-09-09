@@ -427,3 +427,32 @@ def test_optimize_endpoint_invalid_scenario_returns_422():
     """KIRAN-003: Verify malformed scenario returns structured 422 error."""
     resp = client.post("/api/optimize", json={"scenario": {"scenario_name": "invalid_name"}})
     assert resp.status_code == 422
+
+
+def test_scenario_generate_includes_canonical_baseline():
+    """Verify /api/scenario/generate returns authoritative baseline allocation."""
+    resp = client.post("/api/scenario/generate", json={"scenario_name": "normal", "seed": 42})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "baseline" in data
+    assert data["baseline"]["label"] == "baseline"
+    assert data["baseline"]["staff_by_queue"] == {
+        "teller": 4,
+        "loans": 3,
+        "customer_service": 3,
+    }
+
+
+def test_scenario_baseline_endpoint():
+    """Verify POST /api/scenario/baseline returns authoritative baseline allocation."""
+    sc_resp = client.post("/api/scenario/generate", json={"scenario_name": "peak", "seed": 42})
+    scenario = sc_resp.json()["scenario"]
+    resp = client.post("/api/scenario/baseline", json=scenario)
+    assert resp.status_code == 200
+    baseline = resp.json()
+    assert baseline["label"] == "baseline"
+    assert baseline["staff_by_queue"] == {
+        "teller": 4,
+        "loans": 3,
+        "customer_service": 3,
+    }

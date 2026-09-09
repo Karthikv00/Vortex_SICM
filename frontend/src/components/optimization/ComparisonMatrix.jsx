@@ -76,12 +76,18 @@ export default function ComparisonMatrix({
               <span className="val-after green bold">{avgWaitAfter.toFixed(1)} MIN</span>
             </div>
 
-            <div className="impact-delta-pill positive font-mono">
-              <span className="arrow-down">↓</span>
-              <span>{avgWaitReduction.toFixed(1)} MIN</span>
-              <span className="pct-tag">
-                ({avgWaitBefore > 0 ? ((avgWaitReduction / avgWaitBefore) * 100).toFixed(0) : 0}% RELIEF)
-              </span>
+            <div className={`impact-delta-pill ${avgWaitReduction > 0 ? 'positive' : 'neutral'} font-mono`}>
+              {avgWaitReduction > 0 ? (
+                <>
+                  <span className="arrow-down">↓</span>
+                  <span>{avgWaitReduction.toFixed(1)} MIN</span>
+                  <span className="pct-tag">
+                    ({avgWaitBefore > 0 ? ((avgWaitReduction / avgWaitBefore) * 100).toFixed(0) : 0}% RELIEF)
+                  </span>
+                </>
+              ) : (
+                <span>{avgWaitBefore === 0 ? '✓ NOMINAL SLA MAINTAINED' : '— AT CAPACITY LIMIT'}</span>
+              )}
             </div>
           </div>
 
@@ -98,10 +104,16 @@ export default function ComparisonMatrix({
               <span className="val-after green bold">{p95After.toFixed(1)} MIN</span>
             </div>
 
-            <div className="impact-delta-pill positive font-mono">
-              <span className="arrow-down">↓</span>
-              <span>{p95Reduction.toFixed(1)} MIN</span>
-              <span className="pct-tag">WORST-CASE RELIEF</span>
+            <div className={`impact-delta-pill ${p95Reduction > 0 ? 'positive' : 'neutral'} font-mono`}>
+              {p95Reduction > 0 ? (
+                <>
+                  <span className="arrow-down">↓</span>
+                  <span>{p95Reduction.toFixed(1)} MIN</span>
+                  <span className="pct-tag">WORST-CASE RELIEF</span>
+                </>
+              ) : (
+                <span>{p95Before === 0 ? '✓ TAIL LATENCY WITHIN SLA' : '— AT CAPACITY LIMIT'}</span>
+              )}
             </div>
           </div>
 
@@ -120,10 +132,16 @@ export default function ComparisonMatrix({
               </span>
             </div>
 
-            <div className="impact-delta-pill positive font-mono">
-              <span className="arrow-down">↓</span>
-              <span>{overloadsResolved} RESOLVED</span>
-              <span className="pct-tag">CONGESTION INTERVALS</span>
+            <div className={`impact-delta-pill ${overloadsResolved > 0 ? 'positive' : 'neutral'} font-mono`}>
+              {overloadsResolved > 0 ? (
+                <>
+                  <span className="arrow-down">↓</span>
+                  <span>{overloadsResolved} RESOLVED</span>
+                  <span className="pct-tag">CONGESTION INTERVALS</span>
+                </>
+              ) : (
+                <span>{overloadsBefore === 0 ? '✓ ZERO CONGESTION SLOTS' : '— MAXIMUM ALLOCATION ACTIVE'}</span>
+              )}
             </div>
           </div>
 
@@ -131,10 +149,12 @@ export default function ComparisonMatrix({
 
         {/* Audit Benchmark Footer */}
         <div className="impact-card-footer font-mono">
-          <span className="footer-audit-note">MATHEMATICAL MODEL: M/M/C SIMULATION & KNAPSACK HEURISTIC SOLVER</span>
-          <span className="footer-score-note cyan">
-            EVALUATION SCORE: {optimizationResult?.baseline?.score?.toFixed(1) ?? '62.4'} → {optimizationResult?.optimized?.score?.toFixed(1) ?? '83.6'} (+{((optimizationResult?.optimized?.score || 83.6) - (optimizationResult?.baseline?.score || 62.4)).toFixed(1)} PTS)
-          </span>
+          <span className="footer-audit-note">MATHEMATICAL MODEL: DETERMINISTIC QUEUE SIMULATION & EXHAUSTIVE SOLVER</span>
+          {optimizationResult?.baseline?.score != null && optimizationResult?.optimized?.score != null && (
+            <span className="footer-score-note cyan">
+              PENALTY SCORE: {optimizationResult.baseline.score.toFixed(3)} → {optimizationResult.optimized.score.toFixed(3)} ({(optimizationResult.baseline.score - optimizationResult.optimized.score).toFixed(3)} REDUCTION // LOWER IS BETTER)
+            </span>
+          )}
         </div>
       </div>
     </section>

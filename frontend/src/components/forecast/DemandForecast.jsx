@@ -1,7 +1,7 @@
 import React from 'react';
 import ForecastChart from './ForecastChart';
 
-export default function DemandForecast({ forecast, selectedScenario, loading }) {
+export default function DemandForecast({ forecast, scenarioConfig, selectedScenario, loading }) {
   const isSurge = selectedScenario === 'surge';
 
   return (
@@ -16,7 +16,9 @@ export default function DemandForecast({ forecast, selectedScenario, loading }) 
         {/* Top Header & Legend */}
         <div className="forecast-card-header">
           <div className="forecast-horizon-info">
-            <span className="horizon-badge font-mono">HORIZON: 09:00 — 17:00 (32 SLOTS // 15-MIN INTERVALS)</span>
+            <span className="horizon-badge font-mono">
+              HORIZON: {scenarioConfig ? `${scenarioConfig.horizon_start} — ${scenarioConfig.horizon_end}` : '09:00 — 17:00'} ({forecast?.slots?.length || 32} SLOTS // {scenarioConfig?.slot_minutes || 15}-MIN INTERVALS)
+            </span>
             {isSurge && (
               <span className="surge-detected-tag">
                 <span className="status-dot red pulsing" />
@@ -49,7 +51,7 @@ export default function DemandForecast({ forecast, selectedScenario, loading }) 
             <span>NO FORECAST DATA</span>
           </div>
         ) : (
-          <ForecastChart forecast={forecast} selectedScenario={selectedScenario} />
+          <ForecastChart forecast={forecast} scenarioConfig={scenarioConfig} selectedScenario={selectedScenario} />
         )}
       </div>
     </section>

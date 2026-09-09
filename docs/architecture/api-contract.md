@@ -7,7 +7,11 @@ Response: `{"status":"ok"}`
 
 ## POST /api/scenario/generate
 Request: `{"scenario_name":"peak","seed":42}`
-Response: `ScenarioConfig` plus generated synthetic arrival data.
+Response: `{"scenario": ScenarioConfig, "arrivals": SyntheticArrivalData, "baseline": AllocationPlan}`.
+
+## POST /api/scenario/baseline
+Request: `ScenarioConfig`
+Response: Authoritative deterministic `AllocationPlan` (label="baseline").
 
 ## POST /api/forecast
 Request: `{"scenario": ScenarioConfig}`

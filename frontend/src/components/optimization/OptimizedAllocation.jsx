@@ -5,6 +5,7 @@ export default function OptimizedAllocation({
   baselineAllocation = {},
   optimizedAllocation = {},
   optimizedResult,
+  totalStaffBudget = 10,
   onRunOptimization,
   optimizing
 }) {
@@ -40,7 +41,7 @@ export default function OptimizedAllocation({
         <div className="vortex-card cyan-optimized-card">
           <div className="card-top-tag font-mono">
             <span className="allocation-mode-badge cyan">FEASIBLE OPTIMIZATION</span>
-            <span className="allocation-budget-info">HARD CONSTRAINTS SATISFIED: TOTAL STAFF = 10</span>
+            <span className="allocation-budget-info">HARD CONSTRAINTS SATISFIED: TOTAL STAFF = {totalStaffBudget}</span>
           </div>
 
           <div className="table-responsive">
@@ -59,13 +60,13 @@ export default function OptimizedAllocation({
               <tbody>
                 {queues.map((q) => {
                   const qid = q.queue_id;
-                  const bCount = baseStaff[qid] ?? 2;
-                  const oCount = optStaff[qid] ?? bCount;
-                  const delta = oCount - bCount;
-                  const m = optMetrics[qid] || {};
-                  const avgWait = (m.avg_wait_minutes ?? 0).toFixed(1);
-                  const p95Wait = (m.p95_wait_minutes ?? 0).toFixed(1);
-                  const util = Math.round((m.utilization ?? 0) * 100);
+                  const bCount = baseStaff[qid] !== undefined ? baseStaff[qid] : '—';
+                  const oCount = optStaff[qid] !== undefined ? optStaff[qid] : '—';
+                  const delta = (typeof oCount === 'number' && typeof bCount === 'number') ? oCount - bCount : 0;
+                  const m = optMetrics[qid];
+                  const avgWait = m ? (m.avg_wait_minutes ?? 0).toFixed(1) : '—';
+                  const p95Wait = m ? (m.p95_wait_minutes ?? 0).toFixed(1) : '—';
+                  const util = m ? Math.round((m.utilization ?? 0) * 100) : null;
 
                   return (
                     <tr key={qid} className={delta !== 0 ? 'row-shifted' : ''}>
@@ -83,8 +84,8 @@ export default function OptimizedAllocation({
                           <span className="change-tag neutral">0</span>
                         )}
                       </td>
-                      <td className="cell-wait green bold">{avgWait} MIN</td>
-                      <td className="cell-p95 font-mono">{p95Wait} MIN</td>
+                      <td className="cell-wait green bold">{avgWait} {avgWait !== '—' ? 'MIN' : ''}</td>
+                      <td className="cell-p95 font-mono">{p95Wait} {p95Wait !== '—' ? 'MIN' : ''}</td>
                       <td className="cell-util font-mono">
                         <div className="util-cell-wrap">
                           <span>{util}%</span>

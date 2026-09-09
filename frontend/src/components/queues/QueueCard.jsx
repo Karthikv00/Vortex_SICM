@@ -44,7 +44,9 @@ export default function QueueCard({
         <div className="queue-metric-item">
           <span className="queue-metric-label">CURRENT STAFF</span>
           <div className="queue-metric-value-row">
-            <span className="queue-metric-num font-mono cyan">{staffAssigned ?? 2}</span>
+            <span className="queue-metric-num font-mono cyan">
+              {staffAssigned !== undefined && staffAssigned !== null ? staffAssigned : '—'}
+            </span>
             <span className="queue-metric-sub font-mono">AGENTS</span>
           </div>
           <span className="queue-metric-limit">LIMIT: {queueConfig?.min_staff} — {queueConfig?.max_staff}</span>
@@ -55,11 +57,11 @@ export default function QueueCard({
           <span className="queue-metric-label">AVG WAIT</span>
           <div className="queue-metric-value-row">
             <span className={`queue-metric-num font-mono ${statusClass === 'critical' ? 'critical' : (statusClass === 'warning' ? 'warning' : 'normal')}`}>
-              {avgWait.toFixed(1)}
+              {queueMetrics ? avgWait.toFixed(1) : '—'}
             </span>
             <span className="queue-metric-sub font-mono">MIN</span>
           </div>
-          <span className="queue-metric-limit">P95: {(queueMetrics?.p95_wait_minutes ?? avgWait).toFixed(1)}m</span>
+          <span className="queue-metric-limit">P95: {queueMetrics?.p95_wait_minutes != null ? `${queueMetrics.p95_wait_minutes.toFixed(1)}m` : '—'}</span>
         </div>
 
         {/* UTILIZATION */}
@@ -67,7 +69,7 @@ export default function QueueCard({
           <span className="queue-metric-label">UTILIZATION</span>
           <div className="queue-metric-value-row">
             <span className={`queue-metric-num font-mono ${utilPercent > 85 ? 'critical' : (utilPercent > 70 ? 'warning' : 'normal')}`}>
-              {utilPercent}
+              {queueMetrics ? utilPercent : '—'}
             </span>
             <span className="queue-metric-sub font-mono">%</span>
           </div>

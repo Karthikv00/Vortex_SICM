@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function ForecastChart({ forecast, selectedScenario }) {
+export default function ForecastChart({ forecast, scenarioConfig, selectedScenario }) {
   const [hoveredIdx, setHoveredIdx] = useState(null);
 
   if (!forecast?.slots || !forecast?.expected_arrivals) {
@@ -31,6 +31,18 @@ export default function ForecastChart({ forecast, selectedScenario }) {
   const chartWidth = width - padLeft - padRight;
   const chartHeight = height - padTop - padBottom;
   const slotW = chartWidth / slots.length;
+
+  // Compute canonical baseline service capacity per 15-min slot from queue parameters
+  const queues = scenarioConfig?.queues || [];
+  const baselineCapacity = queues.length > 0
+    ? queues.reduce((sum, q) => {
+        const estStaff = q.queue_id === 'teller' ? 4 : (q.queue_id === 'loans' ? 3 : 3);
+        return sum + ((15.0 / (q.avg_service_time_minutes || 5.0)) * estStaff);
+      }, 0)
+    : 0;
+  const capacityY = baselineCapacity > 0
+    ? padTop + chartHeight * (1 - Math.min(0.95, Math.max(0.05, baselineCapacity / maxVal)))
+    : padTop + chartHeight * 0.4;
 
   // Surge window indices: 11:00 (slot 8) to 13:30 (slot 18)
   const surgeStartIdx = slots.indexOf("11:00");
@@ -122,23 +134,23 @@ export default function ForecastChart({ forecast, selectedScenario }) {
         {/* Capacity Baseline Line */}
         <line
           x1={padLeft}
-          y1={padTop + chartHeight * (1 - (isSurge ? 28 / maxVal : 22 / maxVal))}
+          y1={capacityY}
           x2={width - padRight}
-          y2={padTop + chartHeight * (1 - (isSurge ? 28 / maxVal : 22 / maxVal))}
+          y2={capacityY}
           stroke="#F59E0B"
           strokeWidth="1.5"
           strokeDasharray="4,4"
         />
         <text
           x={width - padRight - 6}
-          y={padTop + chartHeight * (1 - (isSurge ? 28 / maxVal : 22 / maxVal)) - 6}
+          y={capacityY - 6}
           textAnchor="end"
           fontSize="9.5"
           fill="#D97706"
           fontFamily="var(--font-mono)"
           fontWeight="600"
         >
-          BASELINE SERVICE CAPACITY
+          BASELINE SERVICE CAPACITY {baselineCapacity > 0 ? `(~${Math.round(baselineCapacity)} / SLOT)` : ''}
         </text>
 
         {/* Data Bars */}

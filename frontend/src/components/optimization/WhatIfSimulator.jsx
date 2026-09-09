@@ -3,20 +3,21 @@ import React, { useState, useEffect } from 'react';
 export default function WhatIfSimulator({
   queues = [],
   totalStaffBudget = 10,
-  initialAllocation = {},
+  initialAllocation = null,
   onRunWhatIf,
   whatIfResult,
   loading
 }) {
   const [allocation, setAllocation] = useState({});
 
+  // Use serialized string key to only trigger when staff numbers genuinely change
+  const allocationKey = initialAllocation ? JSON.stringify(initialAllocation) : '';
+
   useEffect(() => {
     if (initialAllocation && Object.keys(initialAllocation).length > 0) {
-      setAllocation(initialAllocation);
-    } else {
-      setAllocation({ teller: 4, loans: 2, customer_service: 2, cashier: 2 });
+      setAllocation({ ...initialAllocation });
     }
-  }, [initialAllocation]);
+  }, [allocationKey]);
 
   const currentTotal = Object.values(allocation).reduce((a, b) => a + (parseInt(b, 10) || 0), 0);
   const isValidBudget = currentTotal === totalStaffBudget;
@@ -41,7 +42,9 @@ export default function WhatIfSimulator({
   const whatIfMetrics = whatIfResult?.branch_wide;
   const avgWait = whatIfMetrics?.avg_wait_minutes;
   const p95Wait = whatIfMetrics?.p95_wait_minutes;
-  const utilization = whatIfMetrics?.avg_utilization ?? (whatIfMetrics?.utilization ?? 0);
+  const queueUtils = whatIfResult?.per_queue ? Object.values(whatIfResult.per_queue).map(q => q.utilization ?? 0) : [];
+  const meanUtil = queueUtils.length > 0 ? queueUtils.reduce((a, b) => a + b, 0) / queueUtils.length : 0;
+  const utilization = whatIfMetrics?.avg_utilization ?? meanUtil;
   const utilPercent = Math.round(utilization * 100);
   const overloadedSlots = whatIfMetrics?.overloaded_slot_count;
 

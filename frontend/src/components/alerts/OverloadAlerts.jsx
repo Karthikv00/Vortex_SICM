@@ -8,9 +8,7 @@ export default function OverloadAlerts({ simulationResult }) {
   Object.entries(perQueue).forEach(([qid, metrics]) => {
     const slots = metrics?.overloaded_slots || [];
     if (slots.length > 0) {
-      const qTitle = qid === 'teller' ? 'TELLER' :
-                     qid === 'loans' ? 'LOANS' :
-                     qid === 'customer_service' ? 'CUSTOMER SERVICE' : 'CASHIER';
+      const qTitle = qid.replace(/_/g, ' ').toUpperCase();
 
       slots.forEach(slotTime => {
         alerts.push({

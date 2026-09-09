@@ -7,8 +7,11 @@ export default function GlobalMetricsStrip({
   const branchMetrics = simulationResult?.branch_wide;
   const avgWait = branchMetrics?.avg_wait_minutes ?? 0;
   const p95Wait = branchMetrics?.p95_wait_minutes ?? 0;
-  const utilization = branchMetrics?.avg_utilization ?? (branchMetrics?.utilization ?? 0);
-  const utilPercent = Math.round(utilization * 100);
+  const queueList = Object.values(simulationResult?.per_queue || {});
+  const avgUtil = queueList.length > 0
+    ? queueList.reduce((sum, q) => sum + (q.utilization ?? 0), 0) / queueList.length
+    : (branchMetrics?.avg_utilization ?? (branchMetrics?.utilization ?? 0));
+  const utilPercent = Math.round(avgUtil * 100);
   const overloadedSlots = branchMetrics?.overloaded_slot_count ?? 0;
 
   return (
