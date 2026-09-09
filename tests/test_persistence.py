@@ -19,6 +19,28 @@ def test_persistence_status():
     assert "mode" in data
 
 
+def test_env_key_resolution_supports_all_casing_and_names(monkeypatch):
+    """Supports supabase_url, anon_key, service_role_key in any letter case."""
+    monkeypatch.setenv("supabase_url", "https://xyz123.supabase.co")
+    monkeypatch.setenv("anon_key", "mock-anon-key-abc")
+    monkeypatch.setenv("service_role_key", "mock-service-role-key-xyz")
+
+    db.reload_config()
+    assert db.supabase_url == "https://xyz123.supabase.co"
+    assert db.anon_key == "mock-anon-key-abc"
+    assert db.service_role_key == "mock-service-role-key-xyz"
+    # Service role key is preferred for server operations
+    assert db.supabase_key == "mock-service-role-key-xyz"
+    assert db.is_supabase_configured is True
+
+    # If only anon_key is present, it is used
+    monkeypatch.delenv("service_role_key", raising=False)
+    monkeypatch.delenv("SERVICE_ROLE_KEY", raising=False)
+    monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
+    db.reload_config()
+    assert db.supabase_key == "mock-anon-key-abc"
+
+
 def test_branch_list_and_create():
     """Branch creation and listing works."""
     # List branches

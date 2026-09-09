@@ -12,10 +12,19 @@ from __future__ import annotations
 import datetime
 import logging
 import os
+from pathlib import Path
 import uuid
 from typing import Any, Dict, List, Optional
 
+from dotenv import load_dotenv
 import httpx
+
+# Load .env from workspace root or current directory
+_root_env = Path(__file__).resolve().parent.parent / ".env"
+if _root_env.exists():
+    load_dotenv(dotenv_path=_root_env)
+else:
+    load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -95,16 +104,12 @@ INITIAL_TASKS = [
 class PersistenceManager:
     """
     Manages persistence to Supabase with in-memory fallback.
+    Supports all casing variants: SUPABASE_URL/supabase_url,
+    SUPABASE_ANON_KEY/anon_key, and SUPABASE_SERVICE_ROLE_KEY/service_role_key.
     """
 
     def __init__(self) -> None:
-        self.supabase_url = os.getenv("SUPABASE_URL", "").rstrip("/")
-        self.supabase_key = (
-            os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-            or os.getenv("SUPABASE_KEY")
-            or os.getenv("SUPABASE_ANON_KEY")
-            or ""
-        )
+        self.reload_config()
 
         # In-memory storage for fallback / local testing
         self._local_branches: Dict[str, Dict[str, Any]] = {
@@ -114,6 +119,37 @@ class PersistenceManager:
             t["id"]: dict(t) for t in INITIAL_TASKS
         }
         self._local_scenarios: List[Dict[str, Any]] = []
+
+    def _resolve_env(self, *names: str, default: str = "") -> str:
+        for name in names:
+            for candidate in (name, name.lower(), name.upper()):
+                val = os.getenv(candidate)
+                if val and val.strip():
+                    return val.strip()
+        return default
+
+    def reload_config(self) -> None:
+        """Re-read environment variables to pick up any changes from .env."""
+        if _root_env.exists():
+            load_dotenv(dotenv_path=_root_env, override=True)
+        else:
+            load_dotenv(override=True)
+
+        self.supabase_url = self._resolve_env(
+            "SUPABASE_URL", "supabase_url", "VITE_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL"
+        ).rstrip("/")
+        self.anon_key = self._resolve_env(
+            "SUPABASE_ANON_KEY", "anon_key", "ANON_KEY", "SUPABASE_KEY", "supabase_key", "VITE_SUPABASE_ANON_KEY"
+        )
+        self.service_role_key = self._resolve_env(
+            "SUPABASE_SERVICE_ROLE_KEY", "service_role_key", "SERVICE_ROLE_KEY", "SUPABASE_SERVICE_KEY"
+        )
+        # Server-side operations prefer service-role key to bypass RLS, falling back to anon key
+        self.supabase_key = self.service_role_key or self.anon_key
+
+    def _ensure_config(self) -> None:
+        if not self.is_supabase_configured:
+            self.reload_config()
 
     @property
     def is_supabase_configured(self) -> bool:
@@ -129,11 +165,15 @@ class PersistenceManager:
 
     def get_status(self) -> Dict[str, Any]:
         """Check persistence layer connectivity."""
+        self.reload_config()
         if not self.is_supabase_configured:
             return {
                 "connected": True,
                 "mode": "local_fallback",
                 "message": "Running on local deterministic persistence (SUPABASE_URL not configured).",
+                "has_url": bool(self.supabase_url),
+                "has_anon_key": bool(self.anon_key),
+                "has_service_role_key": bool(self.service_role_key),
             }
 
         try:
@@ -167,6 +207,7 @@ class PersistenceManager:
     # Branches CRUD
     # ---------------------------------------------------------------------------
     def get_branches(self) -> List[Dict[str, Any]]:
+        self._ensure_config()
         if self.is_supabase_configured:
             try:
                 with httpx.Client(timeout=3.0) as client:
@@ -184,6 +225,7 @@ class PersistenceManager:
         return list(self._local_branches.values())
 
     def create_branch(self, name: str, location: str) -> Dict[str, Any]:
+        self._ensure_config()
         now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
         branch_id = f"branch-{uuid.uuid4().hex[:8]}"
         payload = {
@@ -215,6 +257,7 @@ class PersistenceManager:
     # Branch Tasks CRUD
     # ---------------------------------------------------------------------------
     def get_branch_tasks(self, branch_id: str) -> List[Dict[str, Any]]:
+        self._ensure_config()
         # Normalize branch_id
         if branch_id == "default":
             branch_id = "branch-main"
@@ -236,6 +279,7 @@ class PersistenceManager:
         return [t for t in self._local_tasks.values() if t["branch_id"] == branch_id]
 
     def create_branch_task(self, branch_id: str, task: Dict[str, Any]) -> Dict[str, Any]:
+        self._ensure_config()
         if branch_id == "default":
             branch_id = "branch-main"
 
@@ -273,6 +317,7 @@ class PersistenceManager:
     def update_branch_task(
         self, branch_id: str, task_id: str, updates: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
+        self._ensure_config()
         if branch_id == "default":
             branch_id = "branch-main"
 
@@ -302,6 +347,7 @@ class PersistenceManager:
         return None
 
     def delete_branch_task(self, branch_id: str, task_id: str) -> bool:
+        self._ensure_config()
         if branch_id == "default":
             branch_id = "branch-main"
 
@@ -333,6 +379,7 @@ class PersistenceManager:
         input_snapshot: Dict[str, Any],
         result_snapshot: Dict[str, Any],
     ) -> Dict[str, Any]:
+        self._ensure_config()
         if branch_id == "default":
             branch_id = "branch-main"
 
@@ -368,6 +415,7 @@ class PersistenceManager:
     def get_scenario_runs(
         self, branch_id: str, scenario_type: Optional[str] = None
     ) -> List[Dict[str, Any]]:
+        self._ensure_config()
         if branch_id == "default":
             branch_id = "branch-main"
 

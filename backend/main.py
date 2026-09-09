@@ -11,9 +11,19 @@ from __future__ import annotations
 
 import logging
 
+from pathlib import Path
+
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+
+# Load environment variables
+_root_env = Path(__file__).resolve().parent.parent / ".env"
+if _root_env.exists():
+    load_dotenv(dotenv_path=_root_env)
+else:
+    load_dotenv()
 
 from backend.routes import (
     branches,
