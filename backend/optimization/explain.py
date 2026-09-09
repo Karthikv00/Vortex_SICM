@@ -20,12 +20,6 @@ from backend.models import (
     ScoreBreakdown,
     SimulationResult,
 )
-from backend.optimization.optimizer import (
-    W_OVERLOAD,
-    W_REALLOC,
-    W_UTIL,
-    W_WAIT,
-)
 
 
 def explain_result(
@@ -157,10 +151,10 @@ def explain_result(
     lines.append(
         f"Selection basis: lowest weighted objective score ({breakdown.total_score:.4f}) "
         f"from {n_feasible} feasible allocations evaluated exhaustively. "
-        f"Score components -- wait: {breakdown.wait_score:.3f} (x{W_WAIT:.1f}), "
-        f"overload: {breakdown.overload_score:.3f} (x{W_OVERLOAD:.1f}), "
-        f"utilization: {breakdown.utilization_score:.3f} (x{W_UTIL:.1f}), "
-        f"reallocation cost: {breakdown.reallocation_cost:.3f} (x{W_REALLOC:.1f})."
+        f"Score components -- wait: {breakdown.wait_score:.3f} (x0.4), "
+        f"overload: {breakdown.overload_score:.3f} (x0.3), "
+        f"utilization: {breakdown.utilization_score:.3f} (x0.2), "
+        f"reallocation cost: {breakdown.reallocation_cost:.3f} (x0.1)."
     )
 
     return " ".join(lines)
