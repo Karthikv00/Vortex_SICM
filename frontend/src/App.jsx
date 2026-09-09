@@ -42,7 +42,7 @@ export default function App() {
   const [whatIfLoading, setWhatIfLoading] = useState(false);
   const [error, setError] = useState(null);
   const [serverStatus, setServerStatus] = useState({ online: false, status: 'initializing' });
-  const [isLiveApi, setIsLiveApi] = useState(false);
+  const [isLiveApi, setIsLiveApi] = useState(true);
 
   // Navigation state
   const [activeNav, setActiveNav] = useState('command-center');
@@ -73,6 +73,35 @@ export default function App() {
     });
   }, []);
 
+  /**
+   * Derives baseline staffing plan respecting queue constraints and available staff.
+   * Matches backend canonical baseline: teller: 4, loans: 3, customer_service: 3.
+   */
+  const deriveInitialBaseline = (config) => {
+    if (!config?.queues) {
+      return { teller: 4, loans: 3, customer_service: 3 };
+    }
+    const staffByQueue = {};
+    let totalAssigned = 0;
+    config.queues.forEach(q => {
+      const min = q.min_staff || 1;
+      staffByQueue[q.queue_id] = min;
+      totalAssigned += min;
+    });
+    let remaining = (config.total_staff_available || 10) - totalAssigned;
+    const priority = ['teller', 'loans', 'customer_service'];
+    for (const qid of priority) {
+      const q = config.queues.find(item => item.queue_id === qid);
+      if (q && remaining > 0) {
+        const maxAllowed = q.max_staff || 10;
+        const canAdd = Math.min(remaining, maxAllowed - staffByQueue[qid]);
+        staffByQueue[qid] += canAdd;
+        remaining -= canAdd;
+      }
+    }
+    return staffByQueue;
+  };
+
   // Load scenario lifecycle
   const loadScenario = useCallback(async (scName) => {
     setLoading(true);
@@ -89,26 +118,21 @@ export default function App() {
       const fcst = await fetchForecast(config);
       setForecast(fcst);
 
-      // 3. Setup default baseline allocation (e.g. 4-2-2-2)
-      const defaultStaff = {
-        teller: 4,
-        loans: 2,
-        customer_service: 2,
-        cashier: 2
-      };
+      // 3. Setup default baseline allocation derived from actual scenario queue constraints
+      const defaultStaff = deriveInitialBaseline(config);
       const basePlan = { label: 'baseline', staff_by_queue: defaultStaff };
       setBaselineAllocation(basePlan);
       setWhatIfAllocation(defaultStaff);
 
       // 4. Run baseline simulation
-      const baseSim = await simulateAllocation(fcst, basePlan);
+      const baseSim = await simulateAllocation(config, fcst, basePlan);
       setBaselineResult(baseSim);
 
     } catch (err) {
       console.error('Failed to load scenario:', err);
       setError({
         error: 'SCENARIO_LOAD_FAILURE',
-        message: 'Could not load branch scenario and forecast projections.'
+        message: err.message || 'Could not load branch scenario and forecast projections.'
       });
     } finally {
       setLoading(false);
@@ -141,6 +165,9 @@ export default function App() {
       if (optRes.baseline?.result) {
         setBaselineResult(optRes.baseline.result);
       }
+      if (optRes.baseline?.allocation) {
+        setBaselineAllocation(optRes.baseline.allocation);
+      }
       if (optRes.optimized?.allocation?.staff_by_queue) {
         setWhatIfAllocation(optRes.optimized.allocation.staff_by_queue);
       }
@@ -148,7 +175,7 @@ export default function App() {
       console.error('Optimization failed:', err);
       setError({
         error: 'OPTIMIZATION_ERROR',
-        message: 'The mathematical solver encountered an error while evaluating resource permutations.'
+        message: err.message || 'The mathematical solver encountered an error while evaluating resource permutations.'
       });
     } finally {
       setOptimizing(false);
@@ -157,15 +184,19 @@ export default function App() {
 
   // Run What-If simulation
   const handleRunWhatIf = async (customStaff) => {
-    if (!forecast) return;
+    if (!forecast || !scenarioConfig) return;
     setWhatIfLoading(true);
     try {
       const plan = { label: 'whatif', staff_by_queue: customStaff };
-      const res = await simulateWhatIf(forecast, plan, scenarioConfig?.queues);
+      const res = await simulateWhatIf(scenarioConfig, forecast, plan, scenarioConfig?.queues);
       setWhatIfResult(res);
       setWhatIfAllocation(customStaff);
     } catch (err) {
       console.error('What-If simulation failed:', err);
+      setError({
+        error: 'WHAT_IF_ERROR',
+        message: err.message || 'What-If simulation failed on backend.'
+      });
     } finally {
       setWhatIfLoading(false);
     }

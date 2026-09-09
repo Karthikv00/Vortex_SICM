@@ -10,7 +10,7 @@ import { SCENARIOS, TIME_SLOTS } from '../mocks/mockData';
 
 // Configurable endpoint with auto-fallback
 const API_BASE = '/api';
-let preferRealApi = false;
+let preferRealApi = true;
 
 export function setApiMode(useReal) {
   preferRealApi = useReal;
@@ -33,7 +33,7 @@ export async function checkHealth() {
   } catch (err) {
     // Offline
   }
-  return { online: false, status: 'offline (mock demo mode)' };
+  return { online: false, status: 'offline' };
 }
 
 /**
@@ -41,19 +41,20 @@ export async function checkHealth() {
  */
 export async function getScenario(scenarioName = 'surge', seed = 42) {
   if (preferRealApi) {
-    try {
-      const res = await fetch(`${API_BASE}/scenario/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenario_name: scenarioName, seed })
-      });
-      if (res.ok) return await res.json();
-    } catch (e) {
-      console.warn('Real API failed, falling back to mock scenario:', e);
+    const res = await fetch(`${API_BASE}/scenario/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scenario_name: scenarioName, seed })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || `Scenario generation failed with status ${res.status}`);
     }
+    const data = await res.json();
+    return data.scenario || data;
   }
 
-  // Deterministic Mock
+  // Deterministic Mock (only used if explicitly in mock mode)
   await new Promise(r => setTimeout(r, 120)); // Subtle realistic latency
   const sc = SCENARIOS[scenarioName] || SCENARIOS.surge;
   return {
@@ -72,16 +73,16 @@ export async function getScenario(scenarioName = 'surge', seed = 42) {
  */
 export async function fetchForecast(scenarioConfig) {
   if (preferRealApi) {
-    try {
-      const res = await fetch(`${API_BASE}/forecast`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenario: scenarioConfig })
-      });
-      if (res.ok) return await res.json();
-    } catch (e) {
-      console.warn('Real API failed, falling back to mock forecast:', e);
+    const res = await fetch(`${API_BASE}/forecast`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scenario: scenarioConfig })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || `Forecast API failed with status ${res.status}`);
     }
+    return await res.json();
   }
 
   await new Promise(r => setTimeout(r, 150));
@@ -92,18 +93,18 @@ export async function fetchForecast(scenarioConfig) {
 /**
  * Simulate allocation
  */
-export async function simulateAllocation(forecast, allocation) {
+export async function simulateAllocation(scenarioConfig, forecast, allocation) {
   if (preferRealApi) {
-    try {
-      const res = await fetch(`${API_BASE}/simulate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ forecast, allocation })
-      });
-      if (res.ok) return await res.json();
-    } catch (e) {
-      console.warn('Real API failed, falling back to mock simulation:', e);
+    const res = await fetch(`${API_BASE}/simulate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scenario: scenarioConfig, forecast, allocation })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || `Simulation API failed with status ${res.status}`);
     }
+    return await res.json();
   }
 
   await new Promise(r => setTimeout(r, 150));
@@ -116,16 +117,16 @@ export async function simulateAllocation(forecast, allocation) {
  */
 export async function optimizeScenario(scenarioConfig, forecast) {
   if (preferRealApi) {
-    try {
-      const res = await fetch(`${API_BASE}/optimize`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenario: scenarioConfig, forecast })
-      });
-      if (res.ok) return await res.json();
-    } catch (e) {
-      console.warn('Real API failed, falling back to mock optimizer:', e);
+    const res = await fetch(`${API_BASE}/optimize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scenario: scenarioConfig, forecast })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || `Optimizer API failed with status ${res.status}`);
     }
+    return await res.json();
   }
 
   // Simulate optimization computation time (250ms)
@@ -146,18 +147,18 @@ export async function optimizeScenario(scenarioConfig, forecast) {
  * What-If Simulation — FR-API-6
  * Computes custom staff rebalance metrics on the fly
  */
-export async function simulateWhatIf(forecast, allocationPlan, queuesConfig) {
+export async function simulateWhatIf(scenarioConfig, forecast, allocationPlan, queuesConfig) {
   if (preferRealApi) {
-    try {
-      const res = await fetch(`${API_BASE}/whatif`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ forecast, allocation: allocationPlan })
-      });
-      if (res.ok) return await res.json();
-    } catch (e) {
-      console.warn('Real API failed, falling back to local simulation:', e);
+    const res = await fetch(`${API_BASE}/whatif`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scenario: scenarioConfig, forecast, allocation: allocationPlan })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || `What-If simulation failed with status ${res.status}`);
     }
+    return await res.json();
   }
 
   await new Promise(r => setTimeout(r, 100));
