@@ -171,5 +171,8 @@ def test_invalid_slot_minutes_rejected():
 
 def test_negative_arrivals_rejected():
     slots = _slots(2)
+    fc = _make_forecast({"q1": [-1.0, 2.0]}, slots)
+    alloc = AllocationPlan(label="baseline", staff_by_queue={"q1": 2})
+
     with pytest.raises(ValueError, match="negative"):
-        _make_forecast({"q1": [-1.0, 2.0]}, slots)
+        simulate(fc, alloc, {"q1": 5.0}, 15)
