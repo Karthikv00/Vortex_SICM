@@ -14,7 +14,7 @@ import ComparisonMatrix from './components/optimization/ComparisonMatrix';
 import WhatIfSimulator from './components/optimization/WhatIfSimulator';
 import ExplanationPanel from './components/optimization/ExplanationPanel';
 import ErrorState from './components/common/ErrorState';
-import { checkHealth, getScenario, fetchForecast, simulateAllocation, optimizeScenario, simulateWhatIf, setApiMode } from './services/api';
+import { checkHealth, getScenario, fetchForecast, simulateAllocation, optimizeScenario, simulateWhatIf, analyzeCustomWorkload, setApiMode } from './services/api';
 
 const EMPTY_CUSTOM_TASKS = { teller: [], loans: [], customer_service: [] };
 
@@ -28,8 +28,11 @@ export default function App() {
   const [whatIfResult, setWhatIfResult] = useState(null);
   const [whatIfAllocation, setWhatIfAllocation] = useState(null);
   const [customTasks, setCustomTasks] = useState(EMPTY_CUSTOM_TASKS);
+  const [customAnalysis, setCustomAnalysis] = useState(null);
+  const [customWorkloadActive, setCustomWorkloadActive] = useState(false);
   const [loading, setLoading] = useState(true);
   const [optimizing, setOptimizing] = useState(false);
+  const [customAnalyzing, setCustomAnalyzing] = useState(false);
   const [whatIfLoading, setWhatIfLoading] = useState(false);
   const [error, setError] = useState(null);
   const [serverStatus, setServerStatus] = useState({ online: false, status: 'initializing' });
@@ -54,7 +57,7 @@ export default function App() {
 
   const loadScenario = useCallback(async (scName) => {
     const reqId = ++activeScenarioReqRef.current;
-    setLoading(true); setError(null); setOptimizationResult(null); setWhatIfResult(null);
+    setLoading(true); setError(null); setOptimizationResult(null); setWhatIfResult(null); setCustomAnalysis(null);
     try {
       const scenarioData = await getScenario(scName);
       if (reqId !== activeScenarioReqRef.current) return;
@@ -75,8 +78,39 @@ export default function App() {
     } finally { if (reqId === activeScenarioReqRef.current) setLoading(false); }
   }, []);
 
-  useEffect(() => { loadScenario(selectedScenario); }, [selectedScenario, loadScenario]);
-  const handleSelectScenario = scName => { if (scName !== selectedScenario) setSelectedScenario(scName); };
+  useEffect(() => {
+    if (!customWorkloadActive) loadScenario(selectedScenario);
+  }, [selectedScenario, loadScenario, customWorkloadActive]);
+
+  const handleSelectScenario = scName => {
+    setCustomWorkloadActive(false);
+    setCustomAnalysis(null);
+    if (scName !== selectedScenario) setSelectedScenario(scName);
+  };
+
+  const handleAnalyzeCustomWorkload = async tasks => {
+    setCustomAnalyzing(true);
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await analyzeCustomWorkload(tasks);
+      setCustomAnalysis(result);
+      setCustomWorkloadActive(true);
+      setSelectedScenario(result.scenario?.scenario_name || selectedScenario);
+      setScenarioConfig(result.scenario);
+      setForecast(result.forecast);
+      setOptimizationResult(result.optimization);
+      setBaselineAllocation(result.optimization?.baseline?.allocation || null);
+      setBaselineResult(result.optimization?.baseline?.result || null);
+      setWhatIfAllocation(result.optimization?.optimized?.allocation?.staff_by_queue || result.optimization?.baseline?.allocation?.staff_by_queue || null);
+      setWhatIfResult(null);
+    } catch (err) {
+      setError({ error: 'CUSTOM_WORKLOAD_ERROR', message: err.message || 'Could not classify the custom workload or allocate resources.' });
+    } finally {
+      setCustomAnalyzing(false);
+      setLoading(false);
+    }
+  };
 
   const handleOptimize = async () => {
     if (!scenarioConfig || !forecast || optimizing) return;
@@ -110,21 +144,25 @@ export default function App() {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  const displayScenario = customWorkloadActive && customAnalysis?.scenario?.scenario_name
+    ? customAnalysis.scenario.scenario_name
+    : selectedScenario;
+
   return (
     <div className={`vortex-app-root ${mobileSidebarOpen ? 'sidebar-open' : ''}`}>
       <Sidebar activeNav={activeNav} onNavClick={handleNavClick} serverStatus={serverStatus} isLiveApi={isLiveApi} />
       {mobileSidebarOpen && <div className="mobile-backdrop" onClick={() => setMobileSidebarOpen(false)} />}
       <div className="vortex-main-wrapper" id="header-top">
-        <Header selectedScenario={selectedScenario} onSelectScenario={handleSelectScenario} onOptimize={handleOptimize} optimizing={optimizing} hasScenario={!!scenarioConfig} onMobileToggle={() => setMobileSidebarOpen(!mobileSidebarOpen)} />
+        <Header selectedScenario={displayScenario} onSelectScenario={handleSelectScenario} onOptimize={handleOptimize} optimizing={optimizing} hasScenario={!!scenarioConfig} onMobileToggle={() => setMobileSidebarOpen(!mobileSidebarOpen)} />
         <main className="vortex-command-canvas">
-          {error && <ErrorState error={error} onRetry={() => loadScenario(selectedScenario)} />}
-          <BranchOverview scenarioConfig={scenarioConfig} selectedScenario={selectedScenario} />
-          <InputDataSummary scenarioConfig={scenarioConfig} forecast={forecast} selectedScenario={selectedScenario} customTasks={customTasks} />
-          <CustomTaskInput value={customTasks} onChange={setCustomTasks} />
+          {error && <ErrorState error={error} onRetry={() => customWorkloadActive ? handleAnalyzeCustomWorkload(customTasks) : loadScenario(selectedScenario)} />}
+          <BranchOverview scenarioConfig={scenarioConfig} selectedScenario={displayScenario} />
+          <InputDataSummary scenarioConfig={scenarioConfig} forecast={forecast} selectedScenario={displayScenario} customTasks={customTasks} />
+          <CustomTaskInput value={customTasks} onChange={setCustomTasks} onAnalyze={handleAnalyzeCustomWorkload} analyzing={customAnalyzing} analysis={customAnalysis} />
           <GlobalMetricsStrip simulationResult={baselineResult} loading={loading} />
           <QueueGrid queues={scenarioConfig?.queues} simulationResult={baselineResult} staffAllocation={baselineAllocation?.staff_by_queue || {}} loading={loading} />
-          <DemandForecast forecast={forecast} scenarioConfig={scenarioConfig} selectedScenario={selectedScenario} loading={loading} />
-          <OverloadAlerts simulationResult={baselineResult} selectedScenario={selectedScenario} />
+          <DemandForecast forecast={forecast} scenarioConfig={scenarioConfig} selectedScenario={displayScenario} loading={loading} />
+          <OverloadAlerts simulationResult={baselineResult} selectedScenario={displayScenario} />
           <BaselineAllocation queues={scenarioConfig?.queues} baselineAllocation={baselineAllocation} baselineResult={baselineResult} totalStaffBudget={scenarioConfig?.total_staff_available || 10} />
           <OptimizedAllocation queues={scenarioConfig?.queues} baselineAllocation={baselineAllocation} optimizedAllocation={optimizationResult?.optimized?.allocation} optimizedResult={optimizationResult?.optimized?.result} totalStaffBudget={scenarioConfig?.total_staff_available || 10} onRunOptimization={handleOptimize} optimizing={optimizing} />
           <ExplanationPanel optimizationResult={optimizationResult} totalStaffBudget={scenarioConfig?.total_staff_available || 10} />
