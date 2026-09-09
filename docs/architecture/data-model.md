@@ -44,13 +44,17 @@ These are the shared contracts used by backend, simulation, optimization, QA, an
       "avg_wait_minutes": 6.2,
       "p95_wait_minutes": 14.0,
       "utilization": 0.81,
-      "overloaded_slots": ["11:00", "11:15"]
+      "overloaded_slots": ["11:00", "11:15"],
+      "total_served": 120,
+      "end_backlog": 0
     }
   },
   "branch_wide": {
     "avg_wait_minutes": 5.1,
     "p95_wait_minutes": 12.4,
-    "overloaded_slot_count": 3
+    "overloaded_slot_count": 3,
+    "total_served": 310,
+    "total_end_backlog": 0
   }
 }
 
@@ -61,12 +65,14 @@ These are the shared contracts used by backend, simulation, optimization, QA, an
   "optimized": {"allocation": AllocationPlan, "result": SimulationResult, "score": float},
   "score_breakdown": {
     "wait_score": float, "overload_score": float,
-    "utilization_score": float, "reallocation_cost": float
+    "utilization_score": float, "reallocation_cost": float,
+    "total_score": float
   },
   "improvement": {
     "avg_wait_reduction_minutes": float,
     "p95_wait_reduction_minutes": float,
-    "overloaded_slots_resolved": int
+    "overloaded_slots_resolved": int,
+    "utilization_delta": float
   },
   "explanation": str,
   "feasible": bool
