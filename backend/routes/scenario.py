@@ -7,7 +7,8 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 from data.scenarios import get_scenario
 from data.generator import generate
-from backend.models import ScenarioConfig
+from backend.models import AllocationPlan, ScenarioConfig
+from backend.optimization.baseline import baseline_allocation
 
 router = APIRouter()
 
@@ -20,7 +21,7 @@ class GenerateRequest(BaseModel):
 @router.post("/scenario/generate")
 def generate_scenario(req: GenerateRequest) -> dict:
     """
-    Generate a ScenarioConfig + synthetic arrival data for the requested scenario.
+    Generate a ScenarioConfig + synthetic arrival data and authoritative baseline for the requested scenario.
     FR-API-2 / FR-DATA-1,2,3,4.
     """
     try:
@@ -30,7 +31,18 @@ def generate_scenario(req: GenerateRequest) -> dict:
         raise HTTPException(status_code=422, detail={"error": "invalid_scenario", "message": str(e), "field": "scenario_name"})
 
     raw_data = generate(scenario)
+    baseline = baseline_allocation(scenario)
     return {
         "scenario": scenario.model_dump(),
         "arrivals": raw_data.model_dump(),
+        "baseline": baseline.model_dump(),
     }
+
+
+@router.post("/scenario/baseline", response_model=AllocationPlan)
+def get_scenario_baseline(scenario: ScenarioConfig) -> AllocationPlan:
+    """
+    Return the authoritative deterministic baseline allocation plan for a scenario.
+    FR-OPT-4 / KIRAN-004.
+    """
+    return baseline_allocation(scenario)

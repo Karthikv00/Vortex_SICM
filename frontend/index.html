@@ -3,120 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vortex SICM — Branch Operations Dashboard</title>
-  <meta name="description" content="Bank branch customer arrival queue simulation and resource allocation optimizer. AAVISHKARA-26 JP-012." />
+  <title>VORTEX SICM — Bank Operations Command Center</title>
+  <meta name="description" content="Customer arrival queue simulation and resource allocation optimizer for bank branch operations. AAVISHKARA-26 JP-012." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Outfit:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
 </head>
 <body>
-  <!-- =====================================================================
-       HEADER
-  ====================================================================== -->
-  <header class="header">
-    <div class="header-inner">
-      <div class="brand">
-        <span class="brand-icon">⚡</span>
-        <span class="brand-name">Vortex SICM</span>
-        <span class="brand-sub">Branch Operations Dashboard</span>
-      </div>
-      <div class="header-controls">
-        <!-- Section 1: Scenario selector -->
-        <label for="scenario-select" class="label">Scenario</label>
-        <select id="scenario-select" class="select">
-          <option value="normal">Normal</option>
-          <option value="peak">Peak</option>
-          <option value="surge">Surge</option>
-        </select>
-        <button id="btn-load" class="btn btn-primary">Load Scenario</button>
-        <button id="btn-optimize" class="btn btn-accent" disabled>Optimize</button>
-      </div>
-    </div>
-  </header>
-
-  <main class="main-grid">
-
-    <!-- ==================================================================
-         SECTION 1 — Branch Overview
-    =================================================================== -->
-    <section class="card full-width" id="section-branch-overview">
-      <h2 class="card-title">Branch Overview</h2>
-      <div id="branch-overview-content" class="panel-loading">Loading…</div>
-    </section>
-
-    <!-- ==================================================================
-         SECTION 2 — Current Queues
-    =================================================================== -->
-    <section class="card" id="section-queues">
-      <h2 class="card-title">Current Queues</h2>
-      <div id="queues-content" class="panel-loading">Loading…</div>
-    </section>
-
-    <!-- ==================================================================
-         SECTION 3 — Demand Forecast
-    =================================================================== -->
-    <section class="card" id="section-forecast">
-      <h2 class="card-title">Demand Forecast</h2>
-      <div id="forecast-content" class="panel-loading">Loading…</div>
-      <canvas id="forecast-chart"></canvas>
-    </section>
-
-    <!-- ==================================================================
-         SECTION 4 — Overload Alerts
-    =================================================================== -->
-    <section class="card" id="section-overload">
-      <h2 class="card-title">Overload Alerts</h2>
-      <div id="overload-content" class="panel-empty">Run a scenario to see alerts.</div>
-    </section>
-
-    <!-- ==================================================================
-         SECTION 5 — Baseline Allocation
-    =================================================================== -->
-    <section class="card" id="section-baseline">
-      <h2 class="card-title">Baseline Allocation</h2>
-      <div id="baseline-content" class="panel-empty">Load scenario first.</div>
-    </section>
-
-    <!-- ==================================================================
-         SECTION 6 — Optimized Allocation
-    =================================================================== -->
-    <section class="card" id="section-optimized">
-      <h2 class="card-title">Optimized Allocation</h2>
-      <div id="optimized-content" class="panel-empty">Click Optimize to see recommendation.</div>
-    </section>
-
-    <!-- ==================================================================
-         SECTION 7 — Before / After Metrics
-    =================================================================== -->
-    <section class="card full-width" id="section-comparison">
-      <h2 class="card-title">Before / After Comparison</h2>
-      <div id="comparison-content" class="panel-empty">Run optimization to compare.</div>
-    </section>
-
-    <!-- ==================================================================
-         SECTION 8 — What-If Controls
-    =================================================================== -->
-    <section class="card" id="section-whatif">
-      <h2 class="card-title">What-If Simulator</h2>
-      <div id="whatif-controls" class="panel-empty">Load scenario to enable controls.</div>
-      <div id="whatif-result"></div>
-    </section>
-
-    <!-- ==================================================================
-         SECTION 9 — Explanation Panel
-    =================================================================== -->
-    <section class="card" id="section-explanation">
-      <h2 class="card-title">Recommendation Explanation</h2>
-      <div id="explanation-content" class="panel-empty">Explanation will appear here after optimization.</div>
-    </section>
-
-  </main>
-
-  <!-- Error toast -->
-  <div id="error-toast" class="error-toast hidden"></div>
-
-  <script src="mock-data.js"></script>
-  <script src="api.js"></script>
-  <script src="app.js"></script>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>
