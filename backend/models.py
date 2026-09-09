@@ -67,6 +67,46 @@ class ScenarioConfig(BaseModel):
         ..., ge=1, description="Total staff budget across all queues"
     )
 
+    @staticmethod
+    def _parse_time(value: str, field_name: str) -> int:
+        """Parse an HH:MM time into minutes since midnight."""
+        try:
+            parts = value.split(":")
+            if len(parts) != 2:
+                raise ValueError
+            hours, minutes = map(int, parts)
+        except (AttributeError, TypeError, ValueError):
+            raise ValueError(
+                f"{field_name} must be a valid HH:MM time"
+            )
+
+        if not (0 <= hours <= 23 and 0 <= minutes <= 59):
+            raise ValueError(
+                f"{field_name} must be a valid HH:MM time"
+            )
+
+        return hours * 60 + minutes
+
+    @model_validator(mode="after")
+    def validate_scenario(self) -> "ScenarioConfig":
+        start = self._parse_time(self.horizon_start, "horizon_start")
+        end = self._parse_time(self.horizon_end, "horizon_end")
+
+        if end <= start:
+            raise ValueError("horizon_end must be after horizon_start")
+
+        duration = end - start
+        if duration % self.slot_minutes != 0:
+            raise ValueError(
+                "Simulation horizon must divide evenly into slot_minutes"
+            )
+
+        queue_ids = self.queue_ids()
+        if len(queue_ids) != len(set(queue_ids)):
+            raise ValueError("queue_id values must be unique")
+
+        return self
+
     def queue_ids(self) -> List[str]:
         return [q.queue_id for q in self.queues]
 
@@ -78,11 +118,9 @@ class ScenarioConfig(BaseModel):
 
     def slot_count(self) -> int:
         """Number of time slots in the simulation horizon."""
-        start_h, start_m = map(int, self.horizon_start.split(":"))
-        end_h, end_m = map(int, self.horizon_end.split(":"))
-        total_minutes = (end_h * 60 + end_m) - (start_h * 60 + start_m)
-        return total_minutes // self.slot_minutes
-
+        start = self._parse_time(self.horizon_start, "horizon_start")
+        end = self._parse_time(self.horizon_end, "horizon_end")
+        return (end - start) // self.slot_minutes
 
 # ---------------------------------------------------------------------------
 # ForecastResult
@@ -103,16 +141,22 @@ class ForecastResult(BaseModel):
     )
 
     @model_validator(mode="after")
-    def lengths_match(self) -> "ForecastResult":
+    def validate_forecast(self) -> "ForecastResult":
         n = len(self.slots)
+
         for qid, arrivals in self.expected_arrivals.items():
             if len(arrivals) != n:
                 raise ValueError(
                     f"expected_arrivals['{qid}'] has {len(arrivals)} entries "
                     f"but slots has {n}"
                 )
-        return self
 
+            if any(arrival < 0 for arrival in arrivals):
+                raise ValueError(
+                    f"expected_arrivals['{qid}'] cannot contain negative values"
+                )
+
+        return self
 
 # ---------------------------------------------------------------------------
 # AllocationPlan
@@ -131,6 +175,19 @@ class AllocationPlan(BaseModel):
     staff_by_queue: Dict[str, int] = Field(
         ..., description="queue_id → staff count"
     )
+
+    @model_validator(mode="after")
+    def validate_staff_counts(self) -> "AllocationPlan":
+        for queue_id, staff_count in self.staff_by_queue.items():
+            if not queue_id.strip():
+                raise ValueError("queue_id values must not be empty")
+
+            if staff_count < 0:
+                raise ValueError(
+                    f"Staff allocation for queue '{queue_id}' cannot be negative"
+                )
+
+        return self
 
     def total_staff(self) -> int:
         return sum(self.staff_by_queue.values())
