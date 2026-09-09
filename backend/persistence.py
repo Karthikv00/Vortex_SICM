@@ -128,12 +128,13 @@ class PersistenceManager:
                     return val.strip()
         return default
 
-    def reload_config(self) -> None:
+    def reload_config(self, load_from_file: bool = True) -> None:
         """Re-read environment variables to pick up any changes from .env."""
-        if _root_env.exists():
-            load_dotenv(dotenv_path=_root_env, override=True)
-        else:
-            load_dotenv(override=True)
+        if load_from_file:
+            if _root_env.exists():
+                load_dotenv(dotenv_path=_root_env, override=True)
+            else:
+                load_dotenv(override=True)
 
         self.supabase_url = self._resolve_env(
             "SUPABASE_URL", "supabase_url", "VITE_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL"
