@@ -3,7 +3,7 @@
 **Project:** AAVISHKARA-26 — JP-012 Customer Arrival Queue Simulation & Resource Allocation Optimizer  
 **Repository:** `Kiran-official/Vortex_SICM`  
 **Status date:** 2026-09-09  
-**Integration baseline:** `main` at merge commit `6a18af086733636f410539a72b2ba8ea4fb65a46`
+**Integration baseline:** `main` at merge commit `ad87af1879aaff7d77f79c25be080fd75056ed3d`
 
 ## 1. Product objective
 
@@ -41,7 +41,8 @@ The backend is the source of truth. The dashboard must visualize real backend re
 - **PR #17 / REETHU-004** — Documentation/code-drift reconciliation.
 - **PR #18 / KARTHI-005** — Safe FastAPI error handling; structured 500 responses and regression coverage for internal failures.
 - **PR #19 / REETHU-P8** — Pre-demo end-to-end integration validation suite and validation checklist. 19/19 focused tests passed; 231/231 full suite at merge; performance SLA and what-if validation included.
-- **PR #20 / KIRAN-003** — API + DecisionPipeline integration hardening. `POST /api/optimize` now exercises the real DecisionPipeline; structured 422 validation, safe 500 behavior, forecast compatibility, and API integration tests. 40/40 API tests, 71/71 related pipeline/optimization tests, and 220/220 full suite at merge.
+- **PR #20 / KIRAN-003** — API + DecisionPipeline integration hardening. `POST /api/optimize` exercises the real DecisionPipeline; structured 422 validation, safe 500 behavior, forecast compatibility, and API integration tests. 40/40 API tests, 71/71 related pipeline/optimization tests, and 220/220 full suite at merge.
+- **PR #21 / final state synchronization** — Consolidated documentation/orchestration state across the task board, participant execution PRDs, validation checklist, `.chatgpt/HACKATHON_CONTEXT.md`, and this project-status document. Documentation-only; no application behavior changes. **Merged into `main` as `ad87af1`.**
 
 **PR #12** was an earlier explanation-weight alignment attempt that was not merged; the intended production change was subsequently completed through PR #14.
 
@@ -60,7 +61,6 @@ Reported on latest `main`:
 - Five-run seed-42 average end-to-end runtime: **13.7 ms Normal, 16.5 ms Peak, 32.0 ms Surge**.
 - FastAPI/error-handling suite: **32/32 passed**.
 - No confirmed backend defect; no code changes required.
-- Working tree was reported clean and local `main` synchronized with `origin/main`.
 
 ### Reethu REETHU-P8
 
