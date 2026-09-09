@@ -10,10 +10,10 @@ Use task IDs in commits and Slack `[CHANGE]` posts. Ownership is a starting resp
 - **KARTHI-005:** FastAPI endpoints — `backend/main.py`, `backend/routes/`; exact API contract; 4h.
 
 ## Kiran
-- **KIRAN-001:** Enumeration sizing benchmark + scoring design; finalize ADR-004 with measured numbers; 2–3h.
-- **KIRAN-002:** Optimizer enumeration/scoring/tie-break — `backend/optimization/optimizer.py`; blocked by correct simulation; 5h.
-- **KIRAN-003:** Deterministic explanation generation — `backend/optimization/explain.py`; traceable to computed numbers; 2h.
-- **KIRAN-004:** Baseline strategy + what-if logic — `backend/optimization/baseline.py` and route contribution; 2h.
+- **KIRAN-001:** Enumeration sizing benchmark + scoring validation; measure real implementation counts/runtime and finalize ADR-004. **NEXT TASK.**
+- **KIRAN-002:** Enumeration/scoring/tie-break optimizer — `backend/optimization/optimizer.py`; implementation present; correctness/performance validation required.
+- **KIRAN-003:** Deterministic explanation generation — `backend/optimization/explain.py`; implementation present; validate against actual computed numbers.
+- **KIRAN-004:** Baseline strategy + what-if logic — `backend/optimization/baseline.py` and route contribution; implementation present; validate against current API/simulation contracts.
 
 ## Reethu
 - **REETHU-001:** Test scaffolding and first generator tests; 2h.
@@ -26,5 +26,7 @@ Use task IDs in commits and Slack `[CHANGE]` posts. Ownership is a starting resp
 - **DEEPANSHA-002:** Full dashboard per spec, including loading/empty/error states; 6–8h.
 - **DEEPANSHA-003:** Real API integration + demo polish; 3–4h.
 
-## Immediate parallel start
-KARTHI-001, KARTHI-002, REETHU-001, and DEEPANSHA-001 can begin in parallel. Kiran can perform KIRAN-001 design/benchmark preparation but must validate optimizer correctness against the real simulation engine.
+## Current coordination state
+The foundation code is now on `main`, including data/forecasting/simulation/optimization/API modules and a first test suite. Do not assume all of those implementations have passed local execution; each owner must verify their path with actual runs.
+
+**Kiran's immediate dependency:** validate `KIRAN-002`/`KIRAN-003`/`KIRAN-004` against the real current simulation/API implementation through `KIRAN-001` before further optimization feature work.
