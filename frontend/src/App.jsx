@@ -211,8 +211,6 @@ export default function App() {
       <Sidebar
         activeNav={activeNav}
         onNavClick={handleNavClick}
-        serverStatus={serverStatus}
-        isLiveApi={isLiveApi}
       />
       {mobileSidebarOpen && (
         <div className="mobile-backdrop" onClick={() => setMobileSidebarOpen(false)} />

@@ -290,40 +290,6 @@ html, body {
   background-color: #FFFFFF;
 }
 
-/* Sidebar Pinned Bottom: SYSTEM STATUS CARD */
-.sidebar-status-block {
-  background: var(--bg-surface-2);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-card);
-  padding: 14px;
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.status-header {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
-  text-transform: uppercase;
-}
-
-.status-pill-online {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--signal-success-bg);
-  border: 1px solid var(--signal-success-border);
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--signal-success-text);
-}
-
 .status-dot {
   width: 6px;
   height: 6px;
@@ -339,37 +305,6 @@ html, body {
   0% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.4; transform: scale(0.85); }
   100% { opacity: 1; transform: scale(1); }
-}
-
-.api-connectivity-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-
-.api-state.connected { color: var(--signal-success-text); font-weight: 700; }
-.api-state.offline { color: var(--signal-warning-text); font-weight: 700; }
-
-.api-toggle-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  cursor: pointer;
-  text-decoration: underline;
-  padding: 0;
-}
-.api-toggle-btn:hover { color: var(--text-primary); }
-
-.status-sec-id {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  color: var(--text-dim);
-  margin-top: 2px;
 }
 
 /* ==========================================================================
