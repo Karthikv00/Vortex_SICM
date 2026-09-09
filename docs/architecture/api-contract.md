@@ -1,13 +1,18 @@
 # API Contract
 
-Base: FastAPI, JSON in/out. Backing types are defined in `data-model.md`. Frontend should mock these responses before backend is live.
+Base: FastAPI, JSON in/out. Backing types are defined in `data-model.md`. Frontend should mock these responses before backend is live; final/live mode must consume FastAPI responses and must not silently substitute mock data on failure.
 
 ## GET /api/health
 Response: `{"status":"ok"}`
 
 ## POST /api/scenario/generate
 Request: `{"scenario_name":"peak","seed":42}`
-Response: `ScenarioConfig` plus generated synthetic arrival data.
+Response: `{ "scenario": ScenarioConfig, "arrivals": GeneratedArrivalData, "baseline": AllocationPlan }`.
+`baseline` is the authoritative deterministic baseline allocation for the generated scenario.
+
+## POST /api/scenario/baseline
+Request: `ScenarioConfig`.
+Response: `AllocationPlan` with `label="baseline"` and `staff_by_queue` satisfying the scenario's hard staffing constraints.
 
 ## POST /api/forecast
 Request: `{"scenario": ScenarioConfig}`
