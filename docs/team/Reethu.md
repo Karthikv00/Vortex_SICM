@@ -7,7 +7,8 @@ QA, data/scenario validation, demo validation, integration verification, documen
 - `REETHU-001` Test scaffolding + strategy execution. *(Completed & merged — PR #6)*
 - `REETHU-002` Edge-case and scenario validation suite. *(Completed & merged — PR #15)*
 - `REETHU-003` Demo scenario validation and realism check. *(Completed & merged — PR #11, #14)*
-- `REETHU-004` Documentation drift monitoring. *(Active)*
+- `REETHU-004` Documentation drift monitoring. *(Completed & merged — PR #17)*
+- `REETHU-P8` Pre-demo end-to-end integration and quality validation. *(Completed — PR ready)*
 
 ## Interfaces depended on
 Every module's public function signatures; tests are contract-driven using `data-model.md` and `api-contract.md`.
