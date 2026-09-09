@@ -12,16 +12,7 @@ import ComparisonMatrix from './components/optimization/ComparisonMatrix';
 import WhatIfSimulator from './components/optimization/WhatIfSimulator';
 import ExplanationPanel from './components/optimization/ExplanationPanel';
 import ErrorState from './components/common/ErrorState';
-
-import {
-  checkHealth,
-  getScenario,
-  fetchForecast,
-  simulateAllocation,
-  optimizeScenario,
-  simulateWhatIf,
-  setApiMode,
-} from './services/api';
+import { checkHealth, getScenario, fetchForecast, simulateAllocation, optimizeScenario, simulateWhatIf, setApiMode } from './services/api';
 
 export default function App() {
   const [selectedScenario, setSelectedScenario] = useState('surge');
@@ -42,221 +33,98 @@ export default function App() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [clock, setClock] = useState(() => new Date().toLocaleTimeString());
 
-  useEffect(() => {
-    const timer = setInterval(() => setClock(new Date().toLocaleTimeString()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+  useEffect(() => { const timer = setInterval(() => setClock(new Date().toLocaleTimeString()), 1000); return () => clearInterval(timer); }, []);
 
-  const refreshHealth = useCallback(async () => {
-    const status = await checkHealth();
-    setServerStatus(status);
-    return status;
-  }, []);
+  const refreshHealth = useCallback(async () => { const status = await checkHealth(); setServerStatus(status); return status; }, []);
 
-  useEffect(() => {
-    refreshHealth().then(status => {
-      if (status.online) {
-        setIsLiveApi(true);
-        setApiMode(true);
-      }
-    });
-  }, [refreshHealth]);
+  useEffect(() => { refreshHealth().then(status => { if (status.online) { setIsLiveApi(true); setApiMode(true); } }); }, [refreshHealth]);
 
   const loadScenario = useCallback(async (scName) => {
-    setLoading(true);
-    setError(null);
-    setOptimizationResult(null);
-    setWhatIfResult(null);
-
+    setLoading(true); setError(null); setOptimizationResult(null); setWhatIfResult(null);
     try {
       const scenarioResponse = await getScenario(scName);
       const config = scenarioResponse.scenario || scenarioResponse;
-      let baseline = scenarioResponse.baseline || null;
-
-      if (!baseline) {
-        throw new Error('Backend did not return an authoritative baseline allocation.');
-      }
-
+      const baseline = scenarioResponse.baseline || null;
+      if (!baseline) throw new Error('Backend did not return an authoritative baseline allocation.');
       setScenarioConfig(config);
       setBaselineAllocation(baseline);
       setWhatIfAllocation(baseline.staff_by_queue || {});
-
       const fcst = await fetchForecast(config);
       setForecast(fcst);
-
-      const basePlan = baseline.label
-        ? baseline
-        : { label: 'baseline', staff_by_queue: baseline.staff_by_queue || baseline };
+      const basePlan = baseline.label ? baseline : { label: 'baseline', staff_by_queue: baseline.staff_by_queue || baseline };
       const baseSim = await simulateAllocation(config, fcst, basePlan);
       setBaselineResult(baseSim);
     } catch (err) {
       console.error('Failed to load scenario:', err);
-      setError({
-        error: 'SCENARIO_LOAD_FAILURE',
-        message: err.message || 'Could not load branch scenario and forecast projections.',
-      });
-    } finally {
-      setLoading(false);
-    }
+      setError({ error: 'SCENARIO_LOAD_FAILURE', message: err.message || 'Could not load branch scenario and forecast projections.' });
+    } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => {
-    loadScenario(selectedScenario);
-  }, [selectedScenario, loadScenario]);
-
-  const handleSelectScenario = (scName) => {
-    if (scName !== selectedScenario) setSelectedScenario(scName);
-  };
+  useEffect(() => { loadScenario(selectedScenario); }, [selectedScenario, loadScenario]);
+  const handleSelectScenario = scName => { if (scName !== selectedScenario) setSelectedScenario(scName); };
 
   const handleOptimize = async () => {
     if (!scenarioConfig || !forecast || optimizing) return;
-    setOptimizing(true);
-    setError(null);
+    setOptimizing(true); setError(null);
     try {
       const optRes = await optimizeScenario(scenarioConfig, forecast);
       setOptimizationResult(optRes);
       if (optRes.baseline?.result) setBaselineResult(optRes.baseline.result);
       if (optRes.baseline?.allocation) setBaselineAllocation(optRes.baseline.allocation);
-      if (optRes.optimized?.allocation?.staff_by_queue) {
-        setWhatIfAllocation(optRes.optimized.allocation.staff_by_queue);
-      }
+      if (optRes.optimized?.allocation?.staff_by_queue) setWhatIfAllocation(optRes.optimized.allocation.staff_by_queue);
     } catch (err) {
       console.error('Optimization failed:', err);
-      setError({
-        error: 'OPTIMIZATION_ERROR',
-        message: err.message || 'The mathematical solver encountered an error while evaluating resource permutations.',
-      });
-    } finally {
-      setOptimizing(false);
-    }
+      setError({ error: 'OPTIMIZATION_ERROR', message: err.message || 'The mathematical solver encountered an error while evaluating resource permutations.' });
+    } finally { setOptimizing(false); }
   };
 
-  const handleRunWhatIf = async (customStaff) => {
+  const handleRunWhatIf = async customStaff => {
     if (!forecast || !scenarioConfig) return;
-    setWhatIfLoading(true);
-    setError(null);
+    setWhatIfLoading(true); setError(null);
     try {
-      const plan = { label: 'whatif', staff_by_queue: customStaff };
-      const res = await simulateWhatIf(scenarioConfig, forecast, plan);
-      setWhatIfResult(res);
-      setWhatIfAllocation(customStaff);
+      const res = await simulateWhatIf(scenarioConfig, forecast, { label: 'whatif', staff_by_queue: customStaff });
+      setWhatIfResult(res); setWhatIfAllocation(customStaff);
     } catch (err) {
       console.error('What-If simulation failed:', err);
-      setError({
-        error: 'WHAT_IF_ERROR',
-        message: err.message || 'What-If simulation failed on backend.',
-      });
-    } finally {
-      setWhatIfLoading(false);
-    }
+      setError({ error: 'WHAT_IF_ERROR', message: err.message || 'What-If simulation failed on backend.' });
+    } finally { setWhatIfLoading(false); }
   };
 
   const handleToggleApiMode = async () => {
-    const nextMode = !isLiveApi;
-    setIsLiveApi(nextMode);
-    setApiMode(nextMode);
+    const nextMode = !isLiveApi; setIsLiveApi(nextMode); setApiMode(nextMode);
     const status = await refreshHealth();
-    if (nextMode && !status.online) {
-      setError({ error: 'BACKEND_OFFLINE', message: 'FastAPI is unavailable. Live mode will not use mock data.' });
-      return;
-    }
+    if (nextMode && !status.online) { setError({ error: 'BACKEND_OFFLINE', message: 'FastAPI is unavailable. Live mode will not use mock data.' }); return; }
     await loadScenario(selectedScenario);
   };
 
-  const handleNavClick = (navId) => {
-    setActiveNav(navId);
-    setMobileSidebarOpen(false);
-    const targetMap = {
-      'command-center': 'header-top',
-      queues: 'queues',
-      'demand-forecast': 'demand-forecast',
-      optimization: 'optimized-allocation',
-      simulation: 'simulation',
-      'what-if': 'what-if',
-    };
+  const handleNavClick = navId => {
+    setActiveNav(navId); setMobileSidebarOpen(false);
+    const targetMap = { 'command-center': 'header-top', queues: 'queues', 'demand-forecast': 'demand-forecast', optimization: 'optimized-allocation', simulation: 'simulation', 'what-if': 'what-if' };
     const targetId = targetMap[navId];
-    if (targetId) {
-      const el = document.getElementById(targetId);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    if (targetId) { const el = document.getElementById(targetId); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   };
 
   const totalStaffBudget = scenarioConfig?.total_staff_available || 0;
 
-  return (
-    <div className={`vortex-app-root ${mobileSidebarOpen ? 'sidebar-open' : ''}`}>
-      <Sidebar
-        activeNav={activeNav}
-        onNavClick={handleNavClick}
-        serverStatus={serverStatus}
-        isLiveApi={isLiveApi}
-        onToggleApiMode={handleToggleApiMode}
-      />
-      {mobileSidebarOpen && <div className="mobile-backdrop" onClick={() => setMobileSidebarOpen(false)} />}
-
-      <div className="vortex-main-wrapper" id="header-top">
-        <Header
-          selectedScenario={selectedScenario}
-          onSelectScenario={handleSelectScenario}
-          onOptimize={handleOptimize}
-          optimizing={optimizing}
-          hasScenario={!!scenarioConfig}
-          onMobileToggle={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-        />
-
-        <main className="vortex-command-canvas">
-          {error && <ErrorState error={error} onRetry={() => loadScenario(selectedScenario)} />}
-          <BranchOverview scenarioConfig={scenarioConfig} selectedScenario={selectedScenario} />
-          <GlobalMetricsStrip simulationResult={baselineResult} loading={loading} />
-          <QueueGrid
-            queues={scenarioConfig?.queues}
-            simulationResult={baselineResult}
-            staffAllocation={baselineAllocation?.staff_by_queue || {}}
-            loading={loading}
-          />
-          <DemandForecast forecast={forecast} selectedScenario={selectedScenario} scenarioConfig={scenarioConfig} loading={loading} />
-          <OverloadAlerts simulationResult={baselineResult} selectedScenario={selectedScenario} />
-          <BaselineAllocation queues={scenarioConfig?.queues} baselineAllocation={baselineAllocation} baselineResult={baselineResult} />
-          <OptimizedAllocation
-            queues={scenarioConfig?.queues}
-            baselineAllocation={baselineAllocation}
-            optimizedAllocation={optimizationResult?.optimized?.allocation}
-            optimizedResult={optimizationResult?.optimized?.result}
-            totalStaffBudget={totalStaffBudget}
-            onRunOptimization={handleOptimize}
-            optimizing={optimizing}
-          />
-          <ComparisonMatrix
-            optimizationResult={optimizationResult}
-            baselineResult={baselineResult}
-            onOptimizeClick={handleOptimize}
-            optimizing={optimizing}
-          />
-          <WhatIfSimulator
-            queues={scenarioConfig?.queues}
-            totalStaffBudget={totalStaffBudget}
-            initialAllocation={whatIfAllocation || baselineAllocation?.staff_by_queue}
-            onRunWhatIf={handleRunWhatIf}
-            whatIfResult={whatIfResult}
-            loading={whatIfLoading}
-          />
-          <ExplanationPanel optimizationResult={optimizationResult} />
-        </main>
-
-        <footer className="vortex-footer font-mono">
-          <div className="footer-left">
-            <span>VORTEX SICM // SEC-OP-012</span><span className="footer-sep">/</span>
-            <span>AAVISHKARA-26 HACKATHON</span><span className="footer-sep">/</span>
-            <span>DETERMINISTIC SIMULATION & OPTIMIZATION ENGINE</span>
-          </div>
-          <div className="footer-right">
-            <span className="footer-clock cyan">LOCAL TIME: {clock}</span><span className="footer-sep">/</span>
-            <span className={`footer-status ${serverStatus.online ? 'green' : 'critical'}`}>
-              SYS STATUS: {serverStatus.online ? 'ONLINE' : 'OFFLINE'}
-            </span>
-          </div>
-        </footer>
-      </div>
+  return <div className={`vortex-app-root ${mobileSidebarOpen ? 'sidebar-open' : ''}`}>
+    <Sidebar activeNav={activeNav} onNavClick={handleNavClick} serverStatus={serverStatus} isLiveApi={isLiveApi} onToggleApiMode={handleToggleApiMode} />
+    {mobileSidebarOpen && <div className="mobile-backdrop" onClick={() => setMobileSidebarOpen(false)} />}
+    <div className="vortex-main-wrapper" id="header-top">
+      <Header selectedScenario={selectedScenario} onSelectScenario={handleSelectScenario} onOptimize={handleOptimize} optimizing={optimizing} hasScenario={!!scenarioConfig} onMobileToggle={() => setMobileSidebarOpen(!mobileSidebarOpen)} />
+      <main className="vortex-command-canvas">
+        {error && <ErrorState error={error} onRetry={() => loadScenario(selectedScenario)} />}
+        <BranchOverview scenarioConfig={scenarioConfig} selectedScenario={selectedScenario} />
+        <GlobalMetricsStrip simulationResult={baselineResult} loading={loading} />
+        <QueueGrid queues={scenarioConfig?.queues} simulationResult={baselineResult} staffAllocation={baselineAllocation?.staff_by_queue || {}} loading={loading} />
+        <DemandForecast forecast={forecast} selectedScenario={selectedScenario} scenarioConfig={scenarioConfig} loading={loading} />
+        <OverloadAlerts simulationResult={baselineResult} selectedScenario={selectedScenario} />
+        <BaselineAllocation queues={scenarioConfig?.queues} baselineAllocation={baselineAllocation} baselineResult={baselineResult} totalStaffBudget={totalStaffBudget} />
+        <OptimizedAllocation queues={scenarioConfig?.queues} baselineAllocation={baselineAllocation} optimizedAllocation={optimizationResult?.optimized?.allocation} optimizedResult={optimizationResult?.optimized?.result} totalStaffBudget={totalStaffBudget} onRunOptimization={handleOptimize} optimizing={optimizing} />
+        <ComparisonMatrix optimizationResult={optimizationResult} baselineResult={baselineResult} onOptimizeClick={handleOptimize} optimizing={optimizing} />
+        <WhatIfSimulator queues={scenarioConfig?.queues} totalStaffBudget={totalStaffBudget} initialAllocation={whatIfAllocation || baselineAllocation?.staff_by_queue} onRunWhatIf={handleRunWhatIf} whatIfResult={whatIfResult} loading={whatIfLoading} />
+        <ExplanationPanel optimizationResult={optimizationResult} totalStaffBudget={totalStaffBudget} />
+      </main>
+      <footer className="vortex-footer font-mono"><div className="footer-left"><span>VORTEX SICM // SEC-OP-012</span><span className="footer-sep">/</span><span>AAVISHKARA-26 HACKATHON</span><span className="footer-sep">/</span><span>DETERMINISTIC SIMULATION & OPTIMIZATION ENGINE</span></div><div className="footer-right"><span className="footer-clock cyan">LOCAL TIME: {clock}</span><span className="footer-sep">/</span><span className={`footer-status ${serverStatus.online ? 'green' : 'critical'}`}>SYS STATUS: {serverStatus.online ? 'ONLINE' : 'OFFLINE'}</span></div></footer>
     </div>
-  );
+  </div>;
 }
