@@ -2,11 +2,14 @@
 tests/test_api.py — FastAPI contract tests.
 
 Covers: TC-19 (malformed JSON → 4xx), TC-20 (missing field → 4xx),
-TC-21 (/api/health → 200), TC-18 (what-if result shape),
-REETHU-002 simulation endpoint and contract validation.
+TC-21 (/api/health → 200), TC-18 (what-if result shape).
+REETHU-001 / FR-API-1 through FR-API-7.
 """
 from __future__ import annotations
 
+from copy import deepcopy
+
+import pytest
 from fastapi.testclient import TestClient
 
 from backend.main import app
@@ -14,15 +17,45 @@ from backend.main import app
 client = TestClient(app)
 
 
+def _scenario_and_forecast() -> tuple[dict, dict]:
+    scenario = client.post(
+        "/api/scenario/generate", json={"scenario_name": "normal", "seed": 42}
+    ).json()["scenario"]
+    forecast = client.post("/api/forecast", json={"scenario": scenario}).json()
+    return scenario, forecast
+
+
+def _allocation(**overrides: int) -> dict:
+    staff = {"teller": 3, "loans": 2, "customer_service": 2}
+    staff.update(overrides)
+    return {"label": "whatif", "staff_by_queue": staff}
+
+
+# ---------------------------------------------------------------------------
+# TC-21: /api/health → 200 + {"status": "ok"}
+# ---------------------------------------------------------------------------
 def test_health_tc21():
     resp = client.get("/api/health")
     assert resp.status_code == 200
     assert resp.json() == {"status": "ok"}
 
 
+# ---------------------------------------------------------------------------
+# TC-19: Malformed / missing body → 4xx
+# ---------------------------------------------------------------------------
 def test_missing_body_scenario_generate_tc19():
     resp = client.post("/api/scenario/generate", json={})
+    # Default values fill in — should succeed with defaults
     assert resp.status_code == 200
+
+
+def test_scenario_generate_rejects_missing_and_malformed_bodies():
+    assert client.post("/api/scenario/generate").status_code == 422
+    assert client.post(
+        "/api/scenario/generate",
+        content="{not json",
+        headers={"content-type": "application/json"},
+    ).status_code == 422
 
 
 def test_invalid_scenario_name():
@@ -30,6 +63,9 @@ def test_invalid_scenario_name():
     assert resp.status_code == 422
 
 
+# ---------------------------------------------------------------------------
+# Full scenario → forecast → optimize round-trip
+# ---------------------------------------------------------------------------
 def test_full_scenario_generate():
     resp = client.post("/api/scenario/generate", json={"scenario_name": "surge", "seed": 42})
     assert resp.status_code == 200
@@ -39,8 +75,10 @@ def test_full_scenario_generate():
 
 
 def test_forecast_endpoint():
+    # First get a scenario
     sc_resp = client.post("/api/scenario/generate", json={"scenario_name": "normal", "seed": 42})
     scenario = sc_resp.json()["scenario"]
+
     resp = client.post("/api/forecast", json={"scenario": scenario})
     assert resp.status_code == 200
     fc = resp.json()
@@ -48,11 +86,84 @@ def test_forecast_endpoint():
     assert "expected_arrivals" in fc
 
 
+def test_forecast_endpoint_rejects_invalid_input():
+    assert client.post("/api/forecast", json={"scenario": {}}).status_code == 422
+
+
+def test_simulate_endpoint_accepts_valid_allocation_and_boundaries():
+    scenario, forecast = _scenario_and_forecast()
+    for allocation in (_allocation(teller=1, loans=1, customer_service=1), _allocation(teller=6, loans=3, customer_service=1)):
+        response = client.post(
+            "/api/simulate",
+            json={"scenario": scenario, "forecast": forecast, "allocation": allocation},
+        )
+        assert response.status_code == 200
+        assert set(response.json()["per_queue"]) == set(allocation["staff_by_queue"])
+
+
+@pytest.mark.parametrize(
+    ("allocation", "error"),
+    [
+        ({"label": "whatif", "staff_by_queue": {"teller": 3, "loans": 2, "customer_service": 2, "extra": 1}}, "allocation_queue_mismatch"),
+        ({"label": "whatif", "staff_by_queue": {"teller": 3, "loans": 2}}, "allocation_queue_mismatch"),
+        (_allocation(teller=0), "staff_limit_violation"),
+        (_allocation(teller=7), "staff_limit_violation"),
+        (_allocation(teller=-1), "staff_limit_violation"),
+        (_allocation(teller=6, loans=3, customer_service=4), "staff_budget_exceeded"),
+    ],
+)
+def test_simulate_endpoint_rejects_invalid_allocations(allocation, error):
+    scenario, forecast = _scenario_and_forecast()
+    response = client.post(
+        "/api/simulate",
+        json={"scenario": scenario, "forecast": forecast, "allocation": allocation},
+    )
+    assert response.status_code == 422
+    assert response.json()["detail"]["error"] == error
+
+
+def test_simulate_negative_staff_uses_business_validation_error():
+    scenario, forecast = _scenario_and_forecast()
+    response = client.post(
+        "/api/simulate",
+        json={"scenario": scenario, "forecast": forecast, "allocation": _allocation(teller=-1)},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == {
+        "error": "staff_limit_violation",
+        "message": "Queue 'teller' staff must be between 1 and 6",
+        "field": "allocation.staff_by_queue.teller",
+    }
+
+
+@pytest.mark.parametrize("mutation", ["scenario_name", "queue_ids", "slot_labels", "slot_length"])
+def test_simulate_endpoint_rejects_incompatible_forecast(mutation):
+    scenario, forecast = _scenario_and_forecast()
+    bad_forecast = deepcopy(forecast)
+    if mutation == "scenario_name":
+        bad_forecast["scenario_name"] = "peak"
+    elif mutation == "queue_ids":
+        bad_forecast["expected_arrivals"]["extra"] = bad_forecast["expected_arrivals"].pop("teller")
+    elif mutation == "slot_labels":
+        bad_forecast["slots"][0] = "08:45"
+    else:
+        bad_forecast["slots"] = bad_forecast["slots"][:-1]
+
+    response = client.post(
+        "/api/simulate",
+        json={"scenario": scenario, "forecast": bad_forecast, "allocation": _allocation()},
+    )
+    assert response.status_code == 422
+
+
 def test_optimize_endpoint():
     sc_resp = client.post("/api/scenario/generate", json={"scenario_name": "surge", "seed": 42})
     scenario = sc_resp.json()["scenario"]
+
     fc_resp = client.post("/api/forecast", json={"scenario": scenario})
     forecast = fc_resp.json()
+
     resp = client.post("/api/optimize", json={"scenario": scenario, "forecast": forecast})
     assert resp.status_code == 200
     opt = resp.json()
@@ -61,92 +172,126 @@ def test_optimize_endpoint():
     assert "improvement" in opt
 
 
+def test_optimize_endpoint_is_deterministic_and_has_complete_contract():
+    scenario, forecast = _scenario_and_forecast()
+    request = {"scenario": scenario, "forecast": forecast}
+    first = client.post("/api/optimize", json=request)
+    second = client.post("/api/optimize", json=request)
+
+    assert first.status_code == 200
+    assert first.json() == second.json()
+    assert {"scenario_name", "baseline", "optimized", "score_breakdown", "improvement", "explanation", "feasible"} <= set(first.json())
+
+
+def test_optimize_endpoint_reports_infeasible_scenario():
+    scenario, _ = _scenario_and_forecast()
+    scenario["total_staff_available"] = 1
+    forecast = client.post("/api/forecast", json={"scenario": scenario}).json()
+
+    response = client.post("/api/optimize", json={"scenario": scenario, "forecast": forecast})
+
+    assert response.status_code == 200
+    assert response.json()["feasible"] is False
+
+
+def test_optimize_endpoint_rejects_incompatible_forecast():
+    scenario, forecast = _scenario_and_forecast()
+    forecast["expected_arrivals"].pop("teller")
+    response = client.post("/api/optimize", json={"scenario": scenario, "forecast": forecast})
+    assert response.status_code == 422
+    assert response.json()["detail"]["error"] == "forecast_queue_mismatch"
+
+
+def test_explain_endpoint_is_deterministic():
+    sc_resp = client.post("/api/scenario/generate", json={"scenario_name": "normal", "seed": 42})
+    scenario = sc_resp.json()["scenario"]
+    forecast = client.post("/api/forecast", json={"scenario": scenario}).json()
+    optimization = client.post(
+        "/api/optimize", json={"scenario": scenario, "forecast": forecast}
+    ).json()
+    request = {"scenario": scenario, "optimization": optimization}
+
+    first = client.post("/api/explain", json=request)
+    second = client.post("/api/explain", json=request)
+
+    assert first.status_code == 200
+    assert first.json() == second.json()
+    assert set(first.json()) == {"explanation"}
+    assert first.json()["explanation"] == optimization["explanation"]
+
+
+def test_explain_endpoint_rejects_invalid_requests():
+    assert client.post("/api/explain").status_code == 422
+    assert client.post("/api/explain", json={"scenario": {}}).status_code == 422
+
+
+def test_explain_endpoint_rejects_scenario_mismatch():
+    scenario, forecast = _scenario_and_forecast()
+    optimization = client.post(
+        "/api/optimize", json={"scenario": scenario, "forecast": forecast}
+    ).json()
+    scenario["scenario_name"] = "peak"
+    response = client.post("/api/explain", json={"scenario": scenario, "optimization": optimization})
+    assert response.status_code == 422
+    assert response.json()["detail"]["error"] == "scenario_mismatch"
+
+
 def test_whatif_endpoint_tc18():
     sc_resp = client.post("/api/scenario/generate", json={"scenario_name": "normal", "seed": 42})
     scenario = sc_resp.json()["scenario"]
+
     fc_resp = client.post("/api/forecast", json={"scenario": scenario})
     forecast = fc_resp.json()
+
     whatif_alloc = {
         "label": "whatif",
         "staff_by_queue": {"teller": 3, "loans": 2, "customer_service": 2},
     }
+
     resp = client.post(
         "/api/whatif",
         json={"scenario": scenario, "forecast": forecast, "allocation": whatif_alloc},
     )
     assert resp.status_code == 200
     result = resp.json()
+    # TC-18: same shape as SimulationResult
     assert "allocation_label" in result
     assert "per_queue" in result
     assert "branch_wide" in result
     assert result["allocation_label"] == "whatif"
 
 
-def _simulation_payload(scenario_name="normal", seed=42, allocation=None):
-    sc_resp = client.post(
-        "/api/scenario/generate", json={"scenario_name": scenario_name, "seed": seed}
-    )
-    assert sc_resp.status_code == 200
-    scenario = sc_resp.json()["scenario"]
-    fc_resp = client.post("/api/forecast", json={"scenario": scenario})
-    assert fc_resp.status_code == 200
-    forecast = fc_resp.json()
-    if allocation is None:
-        allocation = {
-            "label": "baseline",
-            "staff_by_queue": {q["queue_id"]: q["min_staff"] for q in scenario["queues"]},
-        }
-    return scenario, forecast, allocation
-
-
-def test_simulate_endpoint_returns_simulation_result():
-    scenario, forecast, allocation = _simulation_payload()
-    resp = client.post(
-        "/api/simulate",
-        json={"scenario": scenario, "forecast": forecast, "allocation": allocation},
-    )
-    assert resp.status_code == 200
-    result = resp.json()
-    assert result["allocation_label"] == "baseline"
-    assert set(result) == {"allocation_label", "per_queue", "branch_wide"}
-    assert set(result["per_queue"]) == {q["queue_id"] for q in scenario["queues"]}
-
-
-def test_simulate_missing_allocation_queue_returns_422():
-    scenario, forecast, _ = _simulation_payload()
-    allocation = {
-        "label": "baseline",
-        "staff_by_queue": {"teller": 1, "loans": 1},
-    }
-    resp = client.post(
-        "/api/simulate",
-        json={"scenario": scenario, "forecast": forecast, "allocation": allocation},
-    )
-    assert resp.status_code == 422
-    assert resp.json()["detail"]["error"] == "simulation_input_error"
-
-
-def test_whatif_and_simulate_match_for_same_allocation():
-    scenario, forecast, allocation = _simulation_payload()
-    simulate_resp = client.post(
-        "/api/simulate",
-        json={"scenario": scenario, "forecast": forecast, "allocation": allocation},
-    )
-    whatif_allocation = {**allocation, "label": "whatif"}
-    whatif_resp = client.post(
+def test_whatif_endpoint_rejects_invalid_allocation():
+    scenario, forecast = _scenario_and_forecast()
+    response = client.post(
         "/api/whatif",
-        json={"scenario": scenario, "forecast": forecast, "allocation": whatif_allocation},
+        json={"scenario": scenario, "forecast": forecast, "allocation": _allocation(teller=7)},
     )
-    assert simulate_resp.status_code == 200
-    assert whatif_resp.status_code == 200
-    simulate_result = simulate_resp.json()
-    whatif_result = whatif_resp.json()
-    simulate_result["allocation_label"] = "whatif"
-    assert simulate_result == whatif_result
+    assert response.status_code == 422
+    assert response.json()["detail"]["error"] == "staff_limit_violation"
 
 
-def test_forecast_missing_required_scenario_returns_422():
-    """TC-20: an endpoint with a required request field rejects an omitted field."""
-    resp = client.post("/api/forecast", json={})
-    assert resp.status_code == 422
-    assert any(error.get("loc", [None])[-1] == "scenario" for error in resp.json()["detail"])
+def test_whatif_negative_staff_uses_business_validation_error():
+    scenario, forecast = _scenario_and_forecast()
+    response = client.post(
+        "/api/whatif",
+        json={"scenario": scenario, "forecast": forecast, "allocation": _allocation(teller=-1)},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == {
+        "error": "staff_limit_violation",
+        "message": "Queue 'teller' staff must be between 1 and 6",
+        "field": "allocation.staff_by_queue.teller",
+    }
+
+
+def test_whatif_endpoint_rejects_incompatible_forecast():
+    scenario, forecast = _scenario_and_forecast()
+    forecast["scenario_name"] = "peak"
+    response = client.post(
+        "/api/whatif",
+        json={"scenario": scenario, "forecast": forecast, "allocation": _allocation()},
+    )
+    assert response.status_code == 422
+    assert response.json()["detail"]["error"] == "scenario_mismatch"

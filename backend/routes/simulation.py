@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from backend.models import AllocationPlan, ForecastResult, ScenarioConfig, SimulationResult
 from backend.simulation.engine import simulate
+from backend.routes.validation import AllocationInput, validate_allocation, validate_forecast
 
 router = APIRouter()
 
@@ -14,12 +15,16 @@ router = APIRouter()
 class SimulateRequest(BaseModel):
     scenario: ScenarioConfig
     forecast: ForecastResult
-    allocation: AllocationPlan
+    allocation: AllocationInput
 
 
 def _run_simulation(req: SimulateRequest, label_override: str | None = None) -> SimulationResult:
+    validate_forecast(req.scenario, req.forecast)
+    validate_allocation(req.scenario, req.allocation)
     avg_service_times = {q.queue_id: q.avg_service_time_minutes for q in req.scenario.queues}
-    allocation = req.allocation
+    allocation = AllocationPlan(
+        label=req.allocation.label, staff_by_queue=req.allocation.staff_by_queue
+    )
     if label_override:
         allocation = AllocationPlan(label=label_override, staff_by_queue=allocation.staff_by_queue)
     try:
