@@ -45,7 +45,7 @@ def _arrival_data(result):
     elif hasattr(result, "__dict__"):
         result = deepcopy(result.__dict__)
 
-    for key in ("arrival_data", "arrivals", "generated_arrivals"):
+    for key in ("expected_arrivals", "arrival_data", "arrivals", "generated_arrivals"):
         if key in result:
             return result[key]
     raise AssertionError("Generator result must expose generated arrival data")
