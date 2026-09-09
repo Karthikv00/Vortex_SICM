@@ -6,10 +6,10 @@ classifies demand as normal/peak/surge, and runs the existing resource optimizer
 """
 from __future__ import annotations
 
-from typing import Dict, List, Literal
+from typing import Dict, List, Literal, Optional
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from backend.models import ForecastResult, OptimizationResult, ScenarioConfig
 from backend.pipeline import run_decision_pipeline
@@ -24,11 +24,45 @@ class CustomTask(BaseModel):
     service_minutes: float = Field(..., gt=0)
 
 
+class UnifiedTask(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    task_type: str = Field(..., alias="taskType")
+    name: str = Field(..., min_length=1, max_length=80, alias="taskName")
+    customers_per_hour: float = Field(..., ge=0, alias="customersPerHour")
+    service_minutes: float = Field(..., gt=0, alias="averageServiceTimeMinutes")
+
+
 class CustomWorkloadRequest(BaseModel):
+    tasks: Optional[List[UnifiedTask]] = None
     teller: List[CustomTask] = Field(default_factory=list)
     loans: List[CustomTask] = Field(default_factory=list)
     customer_service: List[CustomTask] = Field(default_factory=list)
     seed: int = 42
+
+    @model_validator(mode="after")
+    def populate_from_tasks(self) -> "CustomWorkloadRequest":
+        if self.tasks:
+            t_list = list(self.teller)
+            l_list = list(self.loans)
+            cs_list = list(self.customer_service)
+            for t in self.tasks:
+                task_obj = CustomTask(
+                    name=t.name,
+                    customers_per_hour=t.customers_per_hour,
+                    service_minutes=t.service_minutes,
+                )
+                queue_id = "loans" if t.task_type in ("loan", "loans") else t.task_type
+                if queue_id == "teller":
+                    t_list.append(task_obj)
+                elif queue_id == "loans":
+                    l_list.append(task_obj)
+                elif queue_id == "customer_service":
+                    cs_list.append(task_obj)
+            self.teller = t_list
+            self.loans = l_list
+            self.customer_service = cs_list
+        return self
 
 
 _CANONICAL_QUEUE_RATES = {

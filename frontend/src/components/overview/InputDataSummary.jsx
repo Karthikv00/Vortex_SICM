@@ -35,12 +35,6 @@ export default function InputDataSummary({ scenarioConfig, forecast, selectedSce
             })}
           </tbody></table>
         </div>
-
-        <div className="input-definition-grid">
-          <div className="input-definition-block"><h4>INPUT SYNTHESIS</h4><ul><li>Base arrival rates are defined per queue and per simulation slot.</li><li>{selectedScenario?.toUpperCase() || 'SCENARIO'} applies its configured demand multiplier.</li><li>Time-of-day demand shapes the expected inflow across the operating horizon.</li><li>Seed <code>{scenarioConfig?.seed ?? 42}</code> makes the generated data reproducible.</li></ul></div>
-          <div className="input-definition-block"><h4>MODEL CONSTRAINTS</h4><ul><li>Staff allocation must remain within each queue's minimum and maximum bounds.</li><li>Total allocated staff must equal the branch staff budget.</li><li>Simulation uses the configured {slotMinutes}-minute time step.</li><li>Optimization compares only feasible allocations under identical demand.</li></ul></div>
-          <div className="input-definition-block input-accuracy-block"><h4>HOW INPUT ACCURACY IS JUDGED</h4><ul><li><strong>Validity:</strong> schema, ranges, queue uniqueness, and staffing constraints are checked.</li><li><strong>Reproducibility:</strong> identical scenario + seed produces identical synthetic inputs.</li><li><strong>Accuracy:</strong> cannot be claimed against real bank traffic because this MVP uses synthetic data.</li></ul></div>
-        </div>
       </div>
     </section>
   );

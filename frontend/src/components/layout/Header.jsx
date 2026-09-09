@@ -1,7 +1,7 @@
 import React from 'react';
 
-export default function Header({ selectedScenario, onSelectScenario, onOptimize, optimizing, hasScenario, onMobileToggle }) {
-  const scenarios = ['normal', 'peak', 'surge'];
+export default function Header({ selectedScenario = 'normal', onOptimize, optimizing, hasScenario, onMobileToggle }) {
+  const dotColor = selectedScenario === 'surge' ? 'red pulsing' : (selectedScenario === 'peak' ? 'amber' : 'green');
 
   return (
     <header className="vortex-top-header">
@@ -26,13 +26,12 @@ export default function Header({ selectedScenario, onSelectScenario, onOptimize,
 
         <div className="header-right">
           <div className="scenario-selector-group">
-            <span className="scenario-group-label">SCENARIO</span>
-            <div className="scenario-pill-strip" role="group" aria-label="Scenario Selector">
-              {scenarios.map((sc) => (
-                <button key={sc} className={`scenario-btn ${sc} ${selectedScenario === sc ? 'active' : ''}`} onClick={() => onSelectScenario(sc)} disabled={optimizing}>
-                  {sc.toUpperCase()}
-                </button>
-              ))}
+            <span className="scenario-group-label">OPERATING SCENARIO</span>
+            <div className="scenario-pill-strip auto-classified" role="status" aria-label="Operating Scenario">
+              <span className={`scenario-btn ${selectedScenario} active auto-pill font-mono`}>
+                <span className={`status-dot ${dotColor}`} />
+                {selectedScenario.toUpperCase()} (WORKLOAD-DRIVEN)
+              </span>
             </div>
           </div>
           <button className="cmd-btn-optimize" onClick={onOptimize} disabled={!hasScenario || optimizing} title="Execute mathematical resource optimization engine">
