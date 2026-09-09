@@ -6,6 +6,14 @@ Validates the synthetic customer arrival generator against the documented contra
 - FR-DATA-3: Reproducible output given a fixed random seed (TC-01).
 - FR-DATA-4: Standalone testability independent of API/UI.
 - Acceptance Criteria & Test Cases: TC-01 (determinism), TC-02 (surge > normal), TC-03 (horizon coverage).
+
+Target interface:
+  data.generator.generate(scenario: ScenarioConfig | dict) -> ForecastResult
+  data.generator.generate_arrivals(scenario: ScenarioConfig | dict) -> Dict[str, List[int]]
+  data.generator.generate_slot_labels(scenario: ScenarioConfig | dict) -> List[str]
+  data.scenarios.get_scenario(name: str, seed: int) -> ScenarioConfig
+  backend.models.ScenarioConfig  — Literal["normal", "peak", "surge"] scenario_name
+  backend.models.ForecastResult  — expected_arrivals: Dict[str, List[float]]
 """
 
 from copy import deepcopy
@@ -19,6 +27,10 @@ from data.generator import generate, generate_arrivals, generate_slot_labels
 from data.scenarios import get_scenario, normal_scenario, peak_scenario, surge_scenario
 
 
+# ---------------------------------------------------------------------------
+# Minimal test config — 2 queues, valid for the contract.
+# Does NOT need to match the canonical 3-queue production config.
+# ---------------------------------------------------------------------------
 BASE_CONFIG: Dict[str, Any] = {
     "scenario_name": "normal",
     "seed": 42,
@@ -44,6 +56,10 @@ BASE_CONFIG: Dict[str, Any] = {
     "total_staff_available": 10,
 }
 
+
+# ---------------------------------------------------------------------------
+# Test helpers
+# ---------------------------------------------------------------------------
 
 def _arrival_data(result: Any) -> Dict[str, List[float]]:
     """Extract the arrival mapping (queue_id -> list of counts) from a result object or dict."""
@@ -150,6 +166,7 @@ def test_all_supported_scenarios_are_deterministic(scenario_name: str):
 # ===========================================================================
 # 3. DEMAND BEHAVIOR
 #    - surge demand is higher than normal according to documented behavior
+#    - peak demand is higher than normal (documented multiplier ordering)
 #    - do not invent numerical thresholds that are not specified by project
 # ===========================================================================
 
@@ -173,6 +190,37 @@ def test_surge_demand_is_higher_than_normal():
         for qid in normal_arrivals
     )
     assert has_higher_slot, "Surge arrivals must exceed normal in at least one slot"
+
+
+def test_peak_demand_is_higher_than_normal():
+    """Peak scenario produces higher total demand than normal (multiplier: 1.7 vs 1.0)."""
+    normal = generate(_scenario_dict(BASE_CONFIG, "normal"))
+    peak = generate(_scenario_dict(BASE_CONFIG, "peak"))
+
+    normal_total = sum(_flatten_counts(_arrival_data(normal)))
+    peak_total = sum(_flatten_counts(_arrival_data(peak)))
+
+    assert peak_total > normal_total, (
+        f"Peak total ({peak_total}) must be > normal ({normal_total})"
+    )
+
+
+def test_demand_ordering_normal_peak_surge():
+    """Documented demand intensity ordering: normal < peak < surge (canonical 3-queue config)."""
+    normal = generate(normal_scenario(seed=42))
+    peak = generate(peak_scenario(seed=42))
+    surge = generate(surge_scenario(seed=42))
+
+    normal_total = sum(_flatten_counts(_arrival_data(normal)))
+    peak_total = sum(_flatten_counts(_arrival_data(peak)))
+    surge_total = sum(_flatten_counts(_arrival_data(surge)))
+
+    assert normal_total < peak_total, (
+        f"normal ({normal_total}) must be < peak ({peak_total})"
+    )
+    assert peak_total < surge_total, (
+        f"peak ({peak_total}) must be < surge ({surge_total})"
+    )
 
 
 # ===========================================================================
@@ -212,10 +260,26 @@ def test_slot_labels_helper_matches_horizon():
     assert labels[-1] == "16:45"
 
 
+def test_slot_labels_are_hhmm_format():
+    """All slot labels are formatted as HH:MM with zero-padded hours and minutes."""
+    labels = generate_slot_labels(BASE_CONFIG)
+    for label in labels:
+        assert len(label) == 5, f"Slot label '{label}' is not 5 chars"
+        assert label[2] == ":", f"Slot label '{label}' missing colon at index 2"
+        h, m = label.split(":")
+        assert h.isdigit() and len(h) == 2, f"Hour part '{h}' not zero-padded"
+        assert m.isdigit() and len(m) == 2, f"Minute part '{m}' not zero-padded"
+        assert 0 <= int(h) <= 23 and int(m) in (0, 15, 30, 45), (
+            f"Unexpected slot label '{label}' for 15-minute slots"
+        )
+
+
 # ===========================================================================
 # 5. DATA VALIDITY
 #    - arrival counts are never negative
 #    - output follows the documented ForecastResult / data structure
+#    - ForecastResult.expected_arrivals values are float (per models.py contract)
+#    - generate_arrivals (raw helper) returns int per its docstring
 # ===========================================================================
 
 def test_generated_arrivals_are_non_negative():
@@ -232,20 +296,69 @@ def test_output_conforms_to_forecast_result_contract():
     """Generated result adheres to the ForecastResult contract structure."""
     result = generate(deepcopy(BASE_CONFIG))
 
-    # Validate against ForecastResult structure
-    if isinstance(result, ForecastResult):
-        assert isinstance(result.scenario_name, str)
-        assert isinstance(result.slots, list)
-        assert isinstance(result.expected_arrivals, dict)
-    else:
-        assert "scenario_name" in result
-        assert "slots" in result
-        assert "expected_arrivals" in result
+    # The generator returns a ForecastResult instance
+    assert isinstance(result, ForecastResult), (
+        f"generate() must return ForecastResult, got {type(result).__name__}"
+    )
+    assert isinstance(result.scenario_name, str)
+    assert isinstance(result.slots, list)
+    assert isinstance(result.expected_arrivals, dict)
 
     slots = _slots(result)
     arrivals = _arrival_data(result)
     for qid, counts in arrivals.items():
         assert len(counts) == len(slots), f"Queue {qid} counts length does not match slots"
+
+
+def test_forecast_result_expected_arrivals_are_float():
+    """ForecastResult.expected_arrivals contains float values per the models.py contract.
+
+    generate() casts generate_arrivals() int counts to float before returning.
+    """
+    result = generate(deepcopy(BASE_CONFIG))
+    arrivals = _arrival_data(result)
+
+    for qid, counts in arrivals.items():
+        for val in counts:
+            assert isinstance(val, float), (
+                f"Queue {qid}: expected float in ForecastResult.expected_arrivals, got {type(val).__name__} ({val})"
+            )
+
+
+def test_generate_arrivals_returns_int_counts():
+    """generate_arrivals() (raw helper) returns integer arrival counts per its docstring.
+
+    Arrival counts must be non-negative integers before the float cast in generate().
+    """
+    from data.scenarios import normal_scenario as ns
+    arrivals = generate_arrivals(ns(seed=42))
+
+    assert isinstance(arrivals, dict)
+    for qid, counts in arrivals.items():
+        assert isinstance(counts, list), f"Queue {qid}: expected list, got {type(counts).__name__}"
+        for val in counts:
+            assert isinstance(val, int), (
+                f"Queue {qid}: generate_arrivals must return int counts, got {type(val).__name__} ({val})"
+            )
+            assert val >= 0, f"Queue {qid}: negative count {val}"
+
+
+def test_canonical_three_queue_config_produces_all_queues():
+    """The canonical production config (3 queues) generates arrivals for all three queues."""
+    cfg = normal_scenario(seed=42)
+    result = generate(cfg)
+
+    expected_queues = {"teller", "loans", "customer_service"}
+    assert set(result.expected_arrivals.keys()) == expected_queues, (
+        f"Expected queues {expected_queues}, got {set(result.expected_arrivals.keys())}"
+    )
+    for qid in expected_queues:
+        assert len(result.expected_arrivals[qid]) == 32, (
+            f"Queue {qid}: expected 32 slots, got {len(result.expected_arrivals[qid])}"
+        )
+        assert all(v >= 0 for v in result.expected_arrivals[qid]), (
+            f"Queue {qid}: negative arrivals found"
+        )
 
 
 # ===========================================================================
@@ -270,6 +383,9 @@ def test_different_seeds_produce_different_arrivals():
 # ===========================================================================
 # 7. INVALID INPUT
 #    - invalid scenario names are rejected if project's contract specifies validation
+#    - get_scenario() raises ValueError (registry path)
+#    - ScenarioConfig() raises ValidationError (Pydantic Literal path)
+#    - generate(dict) raises ValidationError via ScenarioConfig(**dict) conversion
 # ===========================================================================
 
 def test_invalid_scenario_name_rejected():
@@ -293,3 +409,14 @@ def test_invalid_scenario_model_rejected():
             queues=BASE_CONFIG["queues"],
             total_staff_available=10,
         )
+
+
+def test_get_scenario_raises_value_error_for_unknown_name():
+    """get_scenario() raises ValueError (not ValidationError) for an unknown name.
+
+    The registry path in data.scenarios explicitly raises ValueError before
+    ScenarioConfig construction, so callers can distinguish lookup errors from
+    schema errors.
+    """
+    with pytest.raises(ValueError, match="normal|peak|surge"):
+        get_scenario("weekend_rush", seed=42)
