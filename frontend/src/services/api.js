@@ -7,6 +7,7 @@
  */
 
 import { SCENARIOS, TIME_SLOTS } from '../mocks/mockData';
+import { normalizeTasksForApi } from '../utils/taskModel';
 
 // Configurable endpoint with auto-fallback
 const API_BASE = '/api';
@@ -128,13 +129,19 @@ export async function fetchForecast(scenarioConfig) {
  * from aggregate demand, builds the task-derived forecast, and runs resource optimization.
  */
 export async function analyzeCustomWorkload(customTasks) {
+  const payload = Array.isArray(customTasks)
+    ? normalizeTasksForApi(customTasks)
+    : (customTasks?.tasks ? customTasks : normalizeTasksForApi(
+        Object.entries(customTasks || {}).flatMap(([qId, list]) => (Array.isArray(list) ? list.map(t => ({ ...t, taskType: qId })) : []))
+      ));
+
   if (preferRealApi) {
     let res;
     try {
       res = await fetch(`${API_BASE}/custom-workload/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(customTasks)
+        body: JSON.stringify(payload)
       });
     } catch (netErr) {
       throw new Error(`Unable to connect to FastAPI backend at ${API_BASE}/custom-workload/analyze.`);
@@ -146,9 +153,9 @@ export async function analyzeCustomWorkload(customTasks) {
   // Deterministic browser fallback using the same demand-band thresholds.
   const canonical = { teller: 20, loans: 4.8, customer_service: 10 };
   const rates = {
-    teller: (customTasks.teller || []).reduce((s, t) => s + Number(t.customersPerHour || 0), 0),
-    loans: (customTasks.loans || []).reduce((s, t) => s + Number(t.customersPerHour || 0), 0),
-    customer_service: (customTasks.customer_service || []).reduce((s, t) => s + Number(t.customersPerHour || 0), 0)
+    teller: (payload.teller || []).reduce((s, t) => s + Number(t.customers_per_hour || 0), 0),
+    loans: (payload.loans || []).reduce((s, t) => s + Number(t.customers_per_hour || 0), 0),
+    customer_service: (payload.customer_service || []).reduce((s, t) => s + Number(t.customers_per_hour || 0), 0)
   };
   const multiplier = (rates.teller + rates.loans + rates.customer_service) /
     (canonical.teller + canonical.loans + canonical.customer_service || 1);
