@@ -3,49 +3,97 @@
 Use task IDs in commits and Slack `[CHANGE]` posts. Ownership is a responsibility boundary; integration work is coordinated across the team.
 
 ## Karthi — backend/data/simulation
-- **KARTHI-001:** Synthetic data generator — deterministic normal/peak/surge. *(Completed & merged — PR #5)*
+- **KARTHI-001:** Synthetic data generator — deterministic Normal/Peak/Surge. *(Completed & merged — PR #5)*
 - **KARTHI-002:** Core domain models and validation. *(Completed & merged — PR #7)*
 - **KARTHI-003:** Deterministic 15-minute-slot simulation and validation hardening. *(Completed & merged — PR #10)*
-- **KARTHI-004:** Demand forecasting; deterministic rolling-average forecast with generator-owned scenario scaling. *(Completed & merged — PR #13)*
-- **KARTHI-005:** FastAPI endpoint/error-handling hardening. *(Completed & merged — PR #18; API validation also hardened in PR #9)*
-- **KARTHI-006:** Backend integration + performance validation. *(Completed — 231/231 tests, deterministic multi-seed validation, real-simulator optimizer validation, performance benchmarks; no code changes required.)*
+- **KARTHI-004:** Demand forecasting; deterministic rolling-average forecast with generator-owned scenario/time-of-day scaling. `_FORECAST_MULTIPLIERS` intentionally remains `1.0` to avoid double-counting. *(Completed & merged — PR #13)*
+- **KARTHI-005:** FastAPI endpoint/error-handling hardening; safe structured 500 responses and server-side internal logging. *(Completed & merged — PR #18; API allocation validation also centralized in PR #9)*
+- **KARTHI-006:** Backend integration + performance validation. *(Completed; no production code changes required.)*
+
+### Karthi validation evidence
+- Latest full backend regression: **231/231 passed**.
+- Normal/Peak/Surge complete pipelines verified.
+- Determinism: **15/15 scenario+seed checks passed**.
+- Demand ordering: **Normal 213.00 < Peak 359.00 < Surge 874.17** for seed 42.
+- Optimized allocations satisfy queue min/max and total staff budget.
+- Invalid queue IDs, negative staff/arrivals, incompatible forecasts, malformed scenarios, and infeasible allocations are rejected.
+- Optimized allocations were evaluated through the real simulator.
+- Five-run seed-42 average end-to-end runtime: **13.7 ms Normal, 16.5 ms Peak, 32.0 ms Surge**; maximum observed runtime was **34.5 ms**.
+- FastAPI/error-handling suite: **32/32 passed**.
+- Working tree was clean and local `main` synchronized with `origin/main` at completion.
 
 ## Kiran — optimization/decision/API integration
-- **KIRAN-001:** Optimization sizing benchmark + scoring validation; real implementation counts/runtime and ADR-004 benchmark. *(Completed & merged — PR #4)*
-- **KIRAN-002:** End-to-end deterministic DecisionPipeline, transport-independent domain validation, and integration. *(Completed & merged — PR #16)*
-- **KIRAN-003:** API + DecisionPipeline integration hardening; real `/api/optimize` pipeline path, structured 422 validation, safe 500 behavior, and integration tests. *(Completed & merged — PR #20)*
-- **KIRAN-004:** Baseline strategy, comparison, explanation, and what-if behavior are implemented and validated as part of the optimization stack. *(Completed & merged; explanation alignment completed in PR #14.)*
+- **KIRAN-001:** Optimization sizing benchmark + scoring validation; real implementation counts/runtime and ADR-004 evidence. *(Completed & merged — PR #4)*
+- **KIRAN-002:** Transport-independent deterministic `DecisionPipeline`, domain forecast validation, and end-to-end integration. *(Completed & merged — PR #16)*
+- **KIRAN-003:** API + DecisionPipeline integration hardening; real `/api/optimize` pipeline path, optional caller forecast, structured 422 validation, safe 500 behavior, and integration tests. *(Completed & merged — PR #20)*
+- **KIRAN-004:** Baseline allocation, comparison, explanation, and what-if behavior; explanation-weight alignment completed through PR #14. *(Completed & merged)*
+
+### Kiran validation evidence
+- PR #20 merge-point: **40/40 API tests**, **71/71 related pipeline/optimization tests**, **220/220 full suite**, `git diff --check` clean.
+- `POST /api/optimize` uses the real `DecisionPipeline` rather than duplicated route logic.
+- Caller-supplied forecasts remain supported and are validated against the scenario.
+- Optimization result carries the forecast required by the integrated consumer.
+- Explanations are generated from actual computed metrics and allocation changes.
 
 ## Reethu — QA/validation
 - **REETHU-001:** Generator validation scaffolding. *(Completed & merged — PR #6)*
-- **REETHU-002:** Forecast/simulation edge-case validation suite. *(Completed & merged — PR #15)*
+- **REETHU-002:** Forecast/simulation edge-case validation suite: 34 dedicated tests. *(Completed & merged — PR #15)*
 - **REETHU-003:** Demo scenario realism and deterministic validation. *(Completed & merged — PR #11; explanation alignment in PR #14)*
 - **REETHU-004:** Documentation/code-drift reconciliation. *(Completed & merged — PR #17)*
-- **REETHU-P8:** Pre-demo end-to-end integration validation and validation-checklist update. *(Completed & merged — PR #19)*
+- **REETHU-P8:** Pre-demo end-to-end integration validation and checklist update. *(Completed & merged — PR #19)*
 - **REETHU-005:** Final QA + acceptance validation: browser/dashboard verification, clean-clone validation, full regression, demo rehearsal, metric traceability, blocker classification, and release sign-off. *(Current release-gate responsibility)*
 
-## Deepansha — dashboard
-- **DEEPANSHA-001:** Dashboard shell and visualization structure. *(Active integration work)*
-- **DEEPANSHA-002:** Full dashboard per approved design, including loading/empty/error states. *(Active integration work)*
-- **DEEPANSHA-003:** Real FastAPI integration + demo polish. *(Current primary implementation priority; must consume real backend responses and remove final mock/demo data paths.)*
+### Reethu validation evidence
+- REETHU-001: **22/22** focused tests; **91/91** full suite at merge point.
+- REETHU-002: **34/34** focused edge-case tests; coverage includes determinism, horizons, invalid inputs, simulation invariants, overload/utilization, serialization, zero-staff behavior, and monotonicity.
+- REETHU-P8: **19/19** focused end-to-end integration tests; **231/231** full suite at merge point.
+- P8 covers live FastAPI demo flow, Normal/Peak/Surge, DecisionPipeline determinism, API-boundary invalid payloads, performance SLAs, and realistic what-if trade-offs.
+- No production backend/frontend behavior was changed by P8.
+
+## Deepansha — dashboard/UX/UI
+- **DEEPANSHA-001:** Dashboard shell and visualization structure. *(Implemented on `DEEPANSHA-001-dashboard`; initial UI commit `b033f45`.)*
+- **DEEPANSHA-002:** Full dashboard per approved design, including all required sections and loading/empty/error states. *(Implemented on `DEEPANSHA-001-dashboard`.)*
+- **DEEPANSHA-003:** Real FastAPI integration + demo polish. *(Implemented on `DEEPANSHA-001-dashboard`; commit `7609a8c`.)*
+
+### Deepansha current branch evidence
+- Dashboard branch has **7 commits ahead of `main` and 19 commits behind `main`** and must be reviewed/integrated before it becomes the release baseline.
+- Branch includes Vite/React frontend, layout/header/sidebar, branch overview, metrics, queue cards, forecast/forecast chart, overload alerts, baseline/optimized allocation panels, comparison matrix, explanation panel, what-if simulator, loading/empty/error states, API service, and Vite proxy configuration.
+- Deepansha verified the Vite production build (**48 modules**).
+- Real HTTP flows were checked through Vite proxy + FastAPI for health, scenario generation, forecast, simulate, optimize, and what-if.
+- Normal/Peak/Surge live flows and structured 422 behavior were checked.
+- Backend-unavailable behavior reaches the dashboard `ErrorState`.
+- Playwright automation was attempted, but browser download failed with an external CDN 404; this is a tooling limitation, not a confirmed application failure.
+- Local `skillset-dashboard/` is scratch/untracked material and is not part of the intended task commit.
+- **Next action:** open PR from `DEEPANSHA-001-dashboard` to `main`, review it, then run final integrated QA.
 
 ## Integrated state — 2026-09-09
 The backend P0 path is implemented and validated through the real API surface:
 
-`synthetic data → forecast → simulation → baseline → optimization → comparison → explanation → API → validation`
+`synthetic data → forecast → simulation → baseline → optimization → comparison → explanation → API → dashboard`
 
-Latest merged documentation synchronization is PR #21, merge commit `ad87af1`. The latest reported backend validation is **231/231 tests passed**. Karthi reports Normal/Peak/Surge end-to-end validation, 15/15 determinism checks, hard-constraint validation, real-simulator optimizer validation, and average end-to-end runtimes of 13.7 ms (Normal), 16.5 ms (Peak), and 32.0 ms (Surge), with no confirmed backend defects.
+Latest merged documentation synchronization before this update was PR #21 (`ad87af1`). This update records the subsequent Deepansha dashboard branch state without claiming that branch is merged.
+
+## P0 decision-quality evidence
+Existing deterministic demo validation reports:
+- **Normal:** 14.1% wait reduction.
+- **Peak:** 48.7% wait reduction.
+- **Surge:** capacity-expansion relief verified.
+
+Additional live seed-42 evidence recorded in the state sync includes Normal optimized allocation `{teller:4, loans:1, customer_service:2}`, Peak `{teller:4, loans:2, customer_service:3}`, and Surge baseline/optimized `{teller:4, loans:3, customer_service:3}`.
 
 ## Current priorities
-1. **Deepansha:** complete real API → dashboard integration and remove mock data from the final/demo execution path.
-2. **Reethu:** final integrated QA, browser/dashboard validation, clean-clone validation, demo rehearsal, and release sign-off.
-3. **Kiran/Karthi:** integration support only; do not introduce new backend features unless a confirmed integration defect blocks P0.
+1. **Deepansha:** open/review dashboard PR, complete real API → dashboard integration, remove any remaining mock/demo execution paths, and polish the demo.
+2. **Reethu:** perform final integrated QA, browser verification, metric traceability, clean-clone validation, demo rehearsal, and release sign-off.
+3. **Kiran/Karthi:** integration support only; no new backend feature work unless a confirmed P0 blocker appears.
 
-## Definition of done for the current phase
-- Real backend response drives the dashboard.
+## Definition of done for the current release phase
+- Real FastAPI responses drive the final dashboard.
 - Normal/Peak/Surge demo path works without code/data injection.
-- Metrics are produced by the deterministic system and are traceable to simulation/optimization results.
+- Forecast, simulation, optimization, comparison, explanation, and what-if values are traceable to actual backend calculations.
 - API errors are structured and safe; internal exception details are not exposed.
-- Full test suite remains green.
+- Full regression remains green.
+- Browser console/network behavior is clean enough for the demo.
+- Loading/empty/error/retry states are verified.
 - Clean clone can install, run, test, and execute the demo path.
-- No secrets, real customer data, fabricated metrics, or unapproved scope are present.
+- Demo is rehearsed at least twice.
+- No secrets, real customer data, fabricated/cherry-picked metrics, or unapproved scope is present.
