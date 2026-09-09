@@ -16,10 +16,22 @@
 
 ## Performance and decision-quality validation
 - [x] Seed-42 average end-to-end runtime measured by Karthi: **13.7 ms Normal, 16.5 ms Peak, 32.0 ms Surge** (5 runs each).
+- [x] Maximum observed canonical runtime was **34.5 ms**.
 - [x] Optimization remains within the documented `<3 s` P0 target for intended MVP sizing.
-- [x] Demo seed produces real, measurable improvement from the deterministic system (existing validation evidence: Normal **14.1%** wait reduction; Peak **48.7%** wait reduction; Surge capacity-expansion relief verified).
+- [x] Demo seed produces real, measurable improvement from the deterministic system: Normal **14.1%** wait reduction; Peak **48.7%** wait reduction; Surge capacity-expansion relief verified.
 - [x] Explanation output is traceable to computed metrics and allocation changes.
 - [x] What-if behavior is validated through genuine backend calculations; P8 reported `<1.5 s` SLA compliance.
+
+## Dashboard branch validation evidence
+- [x] Deepansha dashboard shell and full nine-section dashboard are implemented on `DEEPANSHA-001-dashboard`.
+- [x] Vite production build verified with **48 modules**.
+- [x] Real HTTP flows verified through Vite proxy + FastAPI for health, scenario generation, forecast, simulate, optimize, and what-if.
+- [x] Normal / Peak / Surge live flows verified on the dashboard branch.
+- [x] Structured 422 behavior for invalid inputs verified.
+- [x] Backend-unavailable path reaches the dashboard `ErrorState`.
+- [x] Custom API integration checks completed.
+- [ ] Dashboard branch reviewed and merged into `main`.
+- [ ] Playwright browser automation completed. *(Previous attempt was blocked by external CDN browser-download 404; manual browser validation is still required.)*
 
 ## Dashboard/rehearsal release gate
 - [ ] No frontend console errors during the full real-backend demo.
@@ -30,7 +42,6 @@
 - [ ] Frontend-visible metrics are cross-checked against actual backend responses.
 - [ ] Full demo rehearsed at least twice, preferably by two different people.
 - [ ] Clean-clone setup and demo path verified.
-- [ ] Backup demo path prepared only if permitted by the official event rules.
 
 ## Release/compliance gate
 - [x] Synthetic data only.
@@ -41,4 +52,4 @@
 - [ ] Official event-specific submission/presentation requirements have been checked against the authoritative organizer rules.
 
 ## Current release status
-Backend/API automated validation is complete and green. The final release gate remains **OPEN** until the dashboard is fully integrated and the browser, clean-clone, and rehearsal checks above are actually verified. Do not claim final QA sign-off before those checks are evidenced.
+Backend/API automated validation is complete and green. Deepansha's dashboard implementation and real API integration are validated on the feature branch but are **not yet merged into the release baseline**. The final release gate remains **OPEN** until dashboard review/merge, browser verification, metric traceability, clean-clone validation, rehearsal, and final freeze are evidenced. Do not claim final QA sign-off before those checks are complete.
