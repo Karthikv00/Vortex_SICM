@@ -1,12 +1,13 @@
 # API Notes
 
-Document endpoints here if the project has an API.
+The authoritative API contract for Vortex SICM is documented in:
+[`docs/architecture/api-contract.md`](architecture/api-contract.md)
 
-Example:
-
-| Method | Endpoint | Purpose |
-|---|---|---|
-| GET | /api/health | Health check |
-| POST | /api/... | ... |
-
-Keep request/response examples here once the API is defined.
+Endpoints implemented in `backend/main.py` and `backend/routes/`:
+- `GET /api/health`
+- `POST /api/scenario/generate`
+- `POST /api/forecast`
+- `POST /api/simulate`
+- `POST /api/optimize`
+- `POST /api/whatif`
+- `POST /api/explain`

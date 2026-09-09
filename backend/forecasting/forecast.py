@@ -21,7 +21,61 @@ from __future__ import annotations
 from typing import Dict, List
 
 from backend.models import ForecastResult, ScenarioConfig
-from data.generator import generate
+from data.generator import generate, generate_slot_labels
+
+
+# ---------------------------------------------------------------------------
+# Domain forecast validation
+# ---------------------------------------------------------------------------
+class ForecastValidationError(ValueError):
+    """Raised when a ForecastResult is incompatible with a ScenarioConfig."""
+
+    def __init__(self, error: str, message: str, field: str) -> None:
+        super().__init__(message)
+        self.error = error
+        self.message = message
+        self.field = field
+
+
+def validate_forecast(scenario: ScenarioConfig, forecast: ForecastResult) -> None:
+    """
+    Validate that a ForecastResult matches a ScenarioConfig's specifications.
+
+    Raises ForecastValidationError (a ValueError) on any discrepancy.
+    """
+    scenario_ids = scenario.queue_ids()
+    if len(set(scenario_ids)) != len(scenario_ids):
+        raise ForecastValidationError(
+            "invalid_scenario",
+            "scenario queue_id values must be unique",
+            "scenario.queues",
+        )
+    if forecast.scenario_name != scenario.scenario_name:
+        raise ForecastValidationError(
+            "scenario_mismatch",
+            "forecast.scenario_name must match scenario.scenario_name",
+            "forecast.scenario_name",
+        )
+
+    expected_slots = generate_slot_labels(scenario)
+    if forecast.slots != expected_slots:
+        raise ForecastValidationError(
+            "forecast_horizon_mismatch",
+            "forecast.slots must match the scenario horizon and slot_minutes",
+            "forecast.slots",
+        )
+    if set(forecast.expected_arrivals) != set(scenario_ids):
+        raise ForecastValidationError(
+            "forecast_queue_mismatch",
+            "forecast queue IDs must exactly match scenario queue IDs",
+            "forecast.expected_arrivals",
+        )
+    if any(value < 0 for arrivals in forecast.expected_arrivals.values() for value in arrivals):
+        raise ForecastValidationError(
+            "invalid_forecast",
+            "forecast arrival counts must be non-negative",
+            "forecast.expected_arrivals",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -59,14 +113,22 @@ def forecast(scenario: ScenarioConfig) -> ForecastResult:
 
     Steps:
     1. Generate raw arrival data from the deterministic generator.
-    2. Apply rolling-average smoothing (window=3 slots = 45 min) to reduce
+    2. Apply rolling-average smoothing (window=3 slots ≈ 45 min) to reduce
        slot-to-slot noise while preserving the surge shape.
     3. Return a ForecastResult consumable directly by the simulation engine.
+
+    Scenario scaling (normal/peak/surge) and time-of-day shaping are applied
+    by the data generator.  _FORECAST_MULTIPLIERS are intentionally 1.0
+    (pass-through) so the forecasting layer does not double-count those
+    effects.  Its primary value-add is deterministic smoothing.
 
     Fallback (FR-FCST-3): if generated data has all-zero arrivals for a queue
     (e.g. very short horizon or zero base rate), the forecast returns zeros
     without crashing — the simulation handles zero-arrival queues gracefully.
     """
+    if not scenario.queues:
+        raise ValueError("Scenario must define at least one queue for forecasting")
+
     raw: ForecastResult = generate(scenario)
 
     smoothed_arrivals: Dict[str, List[float]] = {}

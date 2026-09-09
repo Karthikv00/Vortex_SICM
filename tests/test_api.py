@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 
 from backend.main import app
 
-client = TestClient(app)
+client = TestClient(app, raise_server_exceptions=False)
 
 
 def _scenario_and_forecast() -> tuple[dict, dict]:
@@ -120,6 +120,21 @@ def test_simulate_endpoint_rejects_invalid_allocations(allocation, error):
     )
     assert response.status_code == 422
     assert response.json()["detail"]["error"] == error
+
+
+def test_simulate_negative_staff_uses_business_validation_error():
+    scenario, forecast = _scenario_and_forecast()
+    response = client.post(
+        "/api/simulate",
+        json={"scenario": scenario, "forecast": forecast, "allocation": _allocation(teller=-1)},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == {
+        "error": "staff_limit_violation",
+        "message": "Queue 'teller' staff must be between 1 and 6",
+        "field": "allocation.staff_by_queue.teller",
+    }
 
 
 @pytest.mark.parametrize("mutation", ["scenario_name", "queue_ids", "slot_labels", "slot_length"])
@@ -256,6 +271,21 @@ def test_whatif_endpoint_rejects_invalid_allocation():
     assert response.json()["detail"]["error"] == "staff_limit_violation"
 
 
+def test_whatif_negative_staff_uses_business_validation_error():
+    scenario, forecast = _scenario_and_forecast()
+    response = client.post(
+        "/api/whatif",
+        json={"scenario": scenario, "forecast": forecast, "allocation": _allocation(teller=-1)},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == {
+        "error": "staff_limit_violation",
+        "message": "Queue 'teller' staff must be between 1 and 6",
+        "field": "allocation.staff_by_queue.teller",
+    }
+
+
 def test_whatif_endpoint_rejects_incompatible_forecast():
     scenario, forecast = _scenario_and_forecast()
     forecast["scenario_name"] = "peak"
@@ -265,3 +295,41 @@ def test_whatif_endpoint_rejects_incompatible_forecast():
     )
     assert response.status_code == 422
     assert response.json()["detail"]["error"] == "scenario_mismatch"
+
+def test_forecast_server_error_uses_safe_structured_response(monkeypatch):
+    def fail_forecast(_scenario):
+        raise RuntimeError("secret internal implementation detail")
+
+    monkeypatch.setattr("backend.routes.forecast.forecast", fail_forecast)
+
+    scenario = client.post(
+        "/api/scenario/generate",
+        json={"scenario_name": "normal", "seed": 42},
+    ).json()["scenario"]
+
+    response = client.post("/api/forecast", json={"scenario": scenario})
+
+    assert response.status_code == 500
+    assert response.json() == {
+        "detail": {
+            "error": "forecast_error",
+            "message": "Unable to generate forecast",
+        }
+    }
+    assert "secret internal implementation detail" not in response.text
+
+def test_global_server_error_uses_safe_structured_response(monkeypatch):
+    @app.get("/api/test-internal-error")
+    def test_internal_error():
+        raise RuntimeError("secret global implementation detail")
+
+    response = client.get("/api/test-internal-error")
+
+    assert response.status_code == 500
+    assert response.json() == {
+        "detail": {
+            "error": "internal_server_error",
+            "message": "An unexpected server error occurred",
+        }
+    }
+    assert "secret global implementation detail" not in response.text
