@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from backend.models import AllocationPlan, ForecastResult, ScenarioConfig, SimulationResult
 from backend.simulation.engine import simulate
+from backend.routes.validation import validate_allocation, validate_forecast
 
 router = APIRouter()
 
@@ -18,6 +19,8 @@ class SimulateRequest(BaseModel):
 
 
 def _run_simulation(req: SimulateRequest, label_override: str | None = None) -> SimulationResult:
+    validate_forecast(req.scenario, req.forecast)
+    validate_allocation(req.scenario, req.allocation)
     avg_service_times = {q.queue_id: q.avg_service_time_minutes for q in req.scenario.queues}
     allocation = req.allocation
     if label_override:

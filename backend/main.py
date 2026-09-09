@@ -15,7 +15,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.routes import forecast, optimization, scenario, simulation
+from backend.routes import explanation, forecast, optimization, scenario, simulation
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -71,6 +71,7 @@ app.include_router(scenario.router, prefix="/api", tags=["Scenario"])
 app.include_router(forecast.router, prefix="/api", tags=["Forecast"])
 app.include_router(simulation.router, prefix="/api", tags=["Simulation"])
 app.include_router(optimization.router, prefix="/api", tags=["Optimization"])
+app.include_router(explanation.router, prefix="/api", tags=["Explanation"])
 
 
 # ---------------------------------------------------------------------------
