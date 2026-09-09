@@ -110,6 +110,12 @@ def _simulate_queue(
     wait_samples: List[float] = []
 
     for i, arrivals_this_slot in enumerate(arrivals):
+        if arrivals_this_slot < 0:
+            raise ValueError(
+                f"Arrivals for queue '{queue_id}' at slot "
+                f"'{slot_labels[i]}' cannot be negative"
+            )
+
         # ----------------------------------------------------------------
         # 1. Add arrivals to backlog
         # ----------------------------------------------------------------
@@ -180,10 +186,13 @@ def _simulate_queue(
         #    Overloaded if backlog > OVERLOAD_BACKLOG_MULTIPLE × staff_count
         #    For zero staff: any backlog > 0 is overloaded.
         # ----------------------------------------------------------------
-        overload_threshold = OVERLOAD_BACKLOG_MULTIPLE * max(staff_count, 1)
+        overload_threshold = (
+            0
+            if staff_count == 0
+            else OVERLOAD_BACKLOG_MULTIPLE * staff_count
+        )
         if backlog > overload_threshold:
             overloaded_slots.append(slot_labels[i])
-
     # ----------------------------------------------------------------
     # Aggregate per-queue metrics
     # ----------------------------------------------------------------
@@ -229,6 +238,9 @@ def simulate(
     ------
     ValueError  — missing queue in allocation or avg_service_times, or invalid inputs.
     """
+    if slot_minutes <= 0:
+        raise ValueError(f"slot_minutes must be > 0, got {slot_minutes}")
+
     slot_labels = forecast.slots
 
     per_queue_results: Dict[str, QueueSimResult] = {}

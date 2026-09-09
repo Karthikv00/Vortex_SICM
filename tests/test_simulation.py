@@ -149,3 +149,30 @@ def test_missing_queue_in_allocation_raises():
     alloc = AllocationPlan(label="baseline", staff_by_queue={"q1": 2})  # q2 missing
     with pytest.raises(ValueError, match="q2"):
         simulate(fc, alloc, {"q1": 5.0, "q2": 5.0}, 15)
+
+# Zero staff + any positive backlog must be overloaded from first slot
+def test_zero_staff_any_backlog_is_overloaded():
+    slots = _slots(2)
+    fc = _make_forecast({"q1": [1.0, 0.0]}, slots)
+    alloc = AllocationPlan(label="baseline", staff_by_queue={"q1": 0})
+    result = simulate(fc, alloc, {"q1": 5.0}, 15)
+
+    assert result.per_queue["q1"].overloaded_slots == slots
+
+
+def test_invalid_slot_minutes_rejected():
+    slots = _slots(2)
+    fc = _make_forecast({"q1": [1.0, 1.0]}, slots)
+    alloc = AllocationPlan(label="baseline", staff_by_queue={"q1": 2})
+
+    with pytest.raises(ValueError, match="slot_minutes"):
+        simulate(fc, alloc, {"q1": 5.0}, 0)
+
+
+def test_negative_arrivals_rejected():
+    slots = _slots(2)
+    fc = _make_forecast({"q1": [-1.0, 2.0]}, slots)
+    alloc = AllocationPlan(label="baseline", staff_by_queue={"q1": 2})
+
+    with pytest.raises(ValueError, match="negative"):
+        simulate(fc, alloc, {"q1": 5.0}, 15)
