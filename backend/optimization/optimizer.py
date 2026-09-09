@@ -331,7 +331,6 @@ def optimize(
         breakdown=best_breakdown,
         improvement=improvement,
         n_feasible=n_feasible,
-        elapsed_seconds=elapsed,
     )
 
     return OptimizationResult(

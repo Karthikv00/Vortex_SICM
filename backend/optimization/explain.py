@@ -31,7 +31,6 @@ def explain_result(
     breakdown: ScoreBreakdown,
     improvement: ImprovementSummary,
     n_feasible: int,
-    elapsed_seconds: float,
 ) -> str:
     """
     Generate a structured plain-language explanation of the optimization result.
@@ -151,11 +150,11 @@ def explain_result(
     # ----------------------------------------------------------------
     lines.append(
         f"Selection basis: lowest weighted objective score ({breakdown.total_score:.4f}) "
-        f"from {n_feasible} feasible allocations evaluated in {elapsed_seconds:.2f}s. "
-        f"Score components — wait: {breakdown.wait_score:.3f} (×0.4), "
-        f"overload: {breakdown.overload_score:.3f} (×0.3), "
-        f"utilization: {breakdown.utilization_score:.3f} (×0.2), "
-        f"reallocation cost: {breakdown.reallocation_cost:.3f} (×0.1)."
+        f"from {n_feasible} feasible allocations evaluated exhaustively. "
+        f"Score components -- wait: {breakdown.wait_score:.3f} (x0.4), "
+        f"overload: {breakdown.overload_score:.3f} (x0.3), "
+        f"utilization: {breakdown.utilization_score:.3f} (x0.2), "
+        f"reallocation cost: {breakdown.reallocation_cost:.3f} (x0.1)."
     )
 
     return " ".join(lines)
