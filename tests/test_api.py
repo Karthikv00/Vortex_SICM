@@ -145,13 +145,8 @@ def test_whatif_and_simulate_match_for_same_allocation():
     assert simulate_result == whatif_result
 
 
-def test_scenario_generate_missing_required_queues_returns_422():
-    resp = client.post(
-        "/api/scenario/generate",
-        json={
-            "scenario_name": "normal",
-            "seed": 42,
-            "total_staff_available": 10,
-        },
-    )
+def test_forecast_missing_required_scenario_returns_422():
+    """TC-20: an endpoint with a required request field rejects an omitted field."""
+    resp = client.post("/api/forecast", json={})
     assert resp.status_code == 422
+    assert any(error.get("loc", [None])[-1] == "scenario" for error in resp.json()["detail"])
