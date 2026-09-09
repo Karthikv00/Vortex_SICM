@@ -17,7 +17,13 @@ import pytest
 from backend.models import AllocationPlan
 from backend.forecasting.forecast import forecast
 from backend.optimization.baseline import baseline_allocation
-from backend.optimization.optimizer import W_OVERLOAD, W_UTIL, optimize
+from backend.optimization.optimizer import (
+    W_OVERLOAD,
+    W_REALLOC,
+    W_UTIL,
+    W_WAIT,
+    optimize,
+)
 from backend.simulation.engine import simulate
 from data.scenarios import get_scenario
 
@@ -149,8 +155,12 @@ def test_explanation_weight_constants_match_optimizer_weights():
     """Regression guard: explanation must report the weights used by optimizer.py."""
     _, _, _, _, result = _pipeline("normal")
     explanation = result.explanation
-    assert f"(x{W_OVERLOAD:.1f})" in explanation
-    assert f"(x{W_UTIL:.1f})" in explanation
+    assert f"wait: {result.score_breakdown.wait_score:.3f} (x{W_WAIT:.1f})" in explanation
+    assert f"overload: {result.score_breakdown.overload_score:.3f} (x{W_OVERLOAD:.1f})" in explanation
+    assert f"utilization: {result.score_breakdown.utilization_score:.3f} (x{W_UTIL:.1f})" in explanation
+    assert f"reallocation cost: {result.score_breakdown.reallocation_cost:.3f} (x{W_REALLOC:.1f})" in explanation
+    assert "(x0.3)" not in explanation
+    assert "(x0.2)" not in explanation
 
 
 def test_surge_whatif_reallocation_demonstrates_tradeoff():
