@@ -9,7 +9,6 @@ Frontend/dashboard, UX/UI implementation, visualization, UI states, and real bac
 - `DEEPANSHA-003` Real FastAPI integration + demo polish. Integration commit: `7609a8c`.
 
 ## Dashboard surface implemented
-The branch contains the intended single-page P0 dashboard:
 1. Branch overview and scenario selector.
 2. Current queue cards/grid.
 3. Demand forecast and forecast chart.
@@ -20,10 +19,10 @@ The branch contains the intended single-page P0 dashboard:
 8. What-if simulator.
 9. Explanation/recommendation panel.
 
-Supporting frontend pieces include React/Vite setup, header/sidebar, metric/status components, loading/empty/error states, API service, and Vite proxy configuration.
+Supporting pieces: React/Vite setup, header/sidebar, metric/status components, loading/empty/error states, API service, and Vite proxy.
 
 ## Real API integration evidence
-Deepansha verified:
+Deepansha reported:
 - Vite production build with **48 modules**.
 - Real HTTP flows through Vite proxy + FastAPI for health, scenario generation, forecast, simulate, optimize, and what-if.
 - Normal/Peak/Surge live flows.
@@ -31,24 +30,23 @@ Deepansha verified:
 - Backend-unavailable path reaches the dashboard `ErrorState`.
 - Custom API integration checks.
 
-Playwright automation was attempted, but the browser download failed with an external CDN 404. This is recorded as a tooling limitation, not a confirmed application defect.
+Playwright automation was attempted, but browser download failed with an external CDN 404. This is a tooling limitation, not a confirmed application defect. Manual browser validation remains a release gate.
 
 ## Current branch/release status
-The dashboard branch currently compares as **7 commits ahead of `main` and 19 commits behind `main`**. It contains the dashboard implementation, but it is **not yet merged into `main`**.
+Current GitHub comparison against `main` is **7 commits ahead and 30 commits behind**. No PR currently exists for `DEEPANSHA-001-dashboard`.
 
 Immediate next steps:
-1. Synchronize/rebase with the latest `main` as needed while preserving dashboard WIP.
-2. Open the dashboard PR to `main`.
-3. Obtain review and resolve genuine integration issues.
-4. Remove any remaining mock/hard-coded result path from the final/demo execution path.
-5. Let Reethu perform final integrated browser/QA validation after the reviewed dashboard reaches the release baseline.
+1. Synchronize/rebase the feature branch with current `main` while preserving WIP.
+2. Inspect the merged result for conflicts and API-contract drift.
+3. Open a PR to `main` and obtain teammate review.
+4. Verify the final/demo execution path is live-API-only. `frontend/src/mocks/mockData.js` exists on the branch, so confirm it is not used by the release/demo path.
+5. Hand the reviewed release baseline to Reethu for final browser/integration QA.
 
 ## Backend integration contract
-Use the existing FastAPI/backend as the source of truth:
 
 `dashboard controls → FastAPI → DecisionPipeline → real result → dashboard visualization`
 
-Do not duplicate forecasting, simulation, optimization, or KPI calculations in the frontend.
+Do not duplicate forecasting, simulation, optimization, or KPI calculations in frontend code.
 
 ## Required final/demo behavior
 - Scenario selection: Normal / Peak / Surge.
@@ -59,7 +57,7 @@ Do not duplicate forecasting, simulation, optimization, or KPI calculations in t
 - Measured before/after improvement.
 - Deterministic recommendation/explanation.
 - Real what-if result where supported.
-- Explicit loading, empty/invalid, server-error, and retry/recovery states.
+- Loading, empty/invalid, server-error, and retry/recovery states.
 
 ## Critical rules
 - No mock data in the final/demo execution path.

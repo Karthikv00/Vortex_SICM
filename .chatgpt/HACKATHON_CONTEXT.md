@@ -19,15 +19,16 @@ P0 requires multiple queues, Normal/Peak/Surge, forecast, waiting metrics, const
 
 ## 3. Technical source of truth
 - Backend/source-of-truth logic: Python + FastAPI.
-- Core forecasting, simulation, optimization, constraints, and KPIs must work deterministically without an LLM.
+- Forecasting, simulation, optimization, constraints, and KPIs must work deterministically without an LLM.
 - Frontend visualizes backend results; it must not duplicate business logic.
 - Keep scope narrow: no auth/RBAC, microservices, real bank integrations, complex infrastructure, deep-learning-heavy forecasting, or autonomous agents before P0 is stable.
 
 ## 4. Repository and current baseline
 - Repo: `Kiran-official/Vortex_SICM`; default branch: `main`.
-- Main's last consolidated documentation baseline before this update is PR #21 / merge commit `ad87af1`.
-- This documentation update is being prepared on branch `docs/team-state-2026-09-09`; it records the latest team state without directly changing `main`.
-- Deepansha's dashboard remains on `DEEPANSHA-001-dashboard` and is not yet merged into `main`.
+- Current `main`: `4c35a7a73909979e4e33d3521b6fca2cc92dbc35`, the PR #22 merge (`docs: refresh complete team state for dashboard integration`).
+- Dashboard branch: `DEEPANSHA-001-dashboard`; not merged and currently has no PR.
+- GitHub comparison at the latest check: dashboard branch is **7 commits ahead and 30 commits behind `main`**.
+- This documentation reconciliation is being prepared on `docs/final-team-state-sync`; it does not directly change `main` until reviewed/merged.
 
 ## 5. Completed work history
 - PR #1 — shared planning/specification pack synced to GitHub.
@@ -49,22 +50,23 @@ P0 requires multiple queues, Normal/Peak/Surge, forecast, waiting metrics, const
 - PR #19 — REETHU-P8 pre-demo end-to-end integration validation and checklist.
 - PR #20 — KIRAN-003 API + DecisionPipeline integration hardening.
 - PR #21 — consolidated project-state documentation synchronization.
+- PR #22 — refreshed complete team state for dashboard integration.
 - PR #12 was an earlier explanation-weight alignment attempt and was not merged; the intended change was completed through PR #14.
 
 ## 6. Team completion state
 ### Karthi — KARTHI-001..006 complete
-Karthi completed synthetic data, domain models, simulation, forecasting, API/error hardening, and integrated performance validation. Latest reported evidence: **231/231 backend tests**, 15/15 determinism checks, demand ordering, hard constraints, real-simulator optimizer validation, and 13.7/16.5/32.0 ms average end-to-end runtimes for Normal/Peak/Surge. No confirmed backend defect required a code change for KARTHI-006.
+Synthetic data, domain models, simulation, forecasting, API/error hardening, and integration/performance validation are complete. Latest reported evidence: **231/231 backend tests**, **15/15** determinism checks, seed-42 demand ordering Normal 213.00 < Peak 359.00 < Surge 874.17, hard constraints, invalid-input/infeasibility rejection, real-simulator optimization validation, and five-run seed-42 average runtimes of 13.7/16.5/32.0 ms for Normal/Peak/Surge (max 34.5 ms). FastAPI/error handling: **32/32**. No confirmed backend defect required a KARTHI-006 production code change.
 
 ### Kiran — KIRAN-001..004 complete
-Kiran completed optimization benchmark/scoring, transport-independent DecisionPipeline, real API integration, baseline/comparison/explanation/what-if behavior, and explainability alignment. `POST /api/optimize` now uses the real DecisionPipeline with structured 422 validation and safe structured 500 handling.
+Optimization benchmark/scoring, transport-independent DecisionPipeline, real API integration, baseline/comparison/explanation/what-if behavior, and explainability alignment are complete. `POST /api/optimize` uses the real DecisionPipeline with structured 422 validation and safe structured 500 handling. Current role: integration support and genuine P0 blocker resolution only.
 
 ### Reethu — REETHU-001..004 + P8 complete
-Reethu completed generator QA, 34 forecast/simulation edge-case tests, demo scenario validation, documentation/code-drift reconciliation, and P8 with 19 end-to-end integration tests. Current task is **REETHU-005 Final QA + Acceptance Validation**.
+Generator QA, 34 forecast/simulation edge-case tests, demo scenario validation, documentation/code-drift reconciliation, and P8 are complete. P8: **19/19** focused integration tests and **231/231** full suite at merge. Current task: **REETHU-005 Final QA + Acceptance Validation**.
 
-### Deepansha — dashboard implementation on feature branch
-Deepansha implemented DEEPANSHA-001 dashboard shell, DEEPANSHA-002 full dashboard, and DEEPANSHA-003 real FastAPI integration/demo polish on `DEEPANSHA-001-dashboard`. Integration evidence includes a 48-module Vite production build, real health/scenario/forecast/simulate/optimize/what-if HTTP flows through the Vite proxy, Normal/Peak/Surge live flows, structured 422 handling, backend-unavailable `ErrorState`, and custom API checks. Playwright browser download failed with an external CDN 404, which is a tooling limitation rather than a confirmed app defect.
+### Deepansha — DEEPANSHA-001..003 implemented on feature branch
+Dashboard shell, full nine-section dashboard, UI states, and real FastAPI integration/demo polish are implemented on `DEEPANSHA-001-dashboard`. Reported verification: Vite build **48 modules**; live health/scenario/forecast/simulate/optimize/what-if HTTP flows; Normal/Peak/Surge live flows; structured 422 handling; backend-unavailable `ErrorState`; custom API integration checks. Playwright browser download failed due to external CDN 404; manual browser validation remains required.
 
-The dashboard branch compares as **7 commits ahead and 19 commits behind `main`** and still needs PR/review/integration.
+The branch contains `frontend/src/mocks/mockData.js`. Its presence does not establish that mocks are used in production/demo execution, but the final/demo path must be explicitly verified as live-API-only.
 
 ## 7. Latest validated backend evidence
 - Full backend regression: **231/231 passed**.
@@ -76,23 +78,24 @@ The dashboard branch compares as **7 commits ahead and 19 commits behind `main`*
 - Optimized allocations were verified through the real simulator.
 - Seed-42 five-run average runtime: **13.7 ms Normal, 16.5 ms Peak, 32.0 ms Surge**; max **34.5 ms**.
 - FastAPI/error handling: **32/32 passed**.
-
-## 8. Canonical seed-42 scenario evidence
-- Normal: baseline `{teller:4, loans:3, customer_service:3}` → optimized `{teller:4, loans:1, customer_service:2}`; 211 served, 0 backlog; branch wait/p95 0/0.
-- Peak: baseline `{teller:4, loans:3, customer_service:3}` → optimized `{teller:4, loans:2, customer_service:3}`; 362 served, 0 backlog; branch wait/p95 0/0.
-- Surge: baseline and optimized `{teller:4, loans:3, customer_service:3}`; branch avg wait 93.6552 min, p95 153.8674 min, 25 overloaded slots, 730 served, 153 backlog. Baseline is globally optimal under the current objective/constraints.
 - Existing decision-quality evidence: Normal **14.1% wait reduction**, Peak **48.7% wait reduction**, Surge capacity-expansion relief.
 
+## 8. Canonical seed-42 scenario evidence
+- Normal: optimized `{teller:4, loans:1, customer_service:2}`; 211 served, 0 backlog; branch wait/p95 0/0.
+- Peak: optimized `{teller:4, loans:2, customer_service:3}`; 362 served, 0 backlog; branch wait/p95 0/0.
+- Surge: baseline and optimized `{teller:4, loans:3, customer_service:3}`; branch avg wait 93.6552 min, p95 153.8674 min, 25 overloaded slots, 730 served, 153 backlog. Baseline is globally optimal under the current objective/constraints.
+- Surge what-if `{teller:5, loans:2, customer_service:3}`: avg wait 76.7 min; served 752.
+
 ## 9. Current remaining work
-1. Deepansha: open/review dashboard PR, synchronize with latest main while preserving WIP, remove any remaining mock/hard-coded final-demo paths, and polish.
-2. Reethu: final integrated browser QA, metric traceability, full regression after dashboard integration, clean-clone validation, demo rehearsal, blocker classification, and sign-off.
+1. Deepansha: synchronize/rebase the dashboard branch with current main, open/review the dashboard PR, verify live-API-only final/demo paths, and polish only as needed.
+2. Reethu: final integrated browser QA, metric traceability, full regression after dashboard merge, clean-clone validation, demo rehearsal, blocker classification, and sign-off.
 3. Kiran/Karthi: integration support only; no new backend features unless a confirmed P0 blocker appears.
 
 ## 10. Release gates
-Automated backend/API validation is green. Final release is **not yet signed off**. Remaining gates: reviewed dashboard merge, real browser dashboard validation, console/network cleanliness, loading/empty/error/retry verification, backend-to-UI metric traceability, full regression, clean-clone setup/test/demo, at least two rehearsals, final freeze, and organizer-specific rule confirmation.
+Automated backend/API validation is green. Final release is **not signed off**. Remaining gates: dashboard synchronization and reviewed merge, browser validation, console/network cleanliness, loading/empty/error/retry verification, backend-to-UI metric traceability, full regression, clean-clone setup/test/demo, at least two rehearsals, final freeze, and organizer-specific rule confirmation.
 
 ## 11. Synchronization protocol
-The repository is the implementation source of truth. Before substantive actions, inspect current `main` and recent PRs when changes may have occurred. Update this file and relevant docs when project state changes. Do not let old conversation context override current GitHub state.
+The repository is the implementation source of truth. Before substantive actions, inspect current `main`, branch divergence, and recent PRs when changes may have occurred. Update this file and relevant docs when project state changes. Do not let old conversation context override current GitHub state.
 
 For task handoffs use: STARTED → READY FOR REVIEW → BLOCKED → INTEGRATION READY → DONE.
 
