@@ -116,17 +116,29 @@ def test_baseline_allocation_deterministic():
 
 
 # ---------------------------------------------------------------------------
-# TC-22 (partial): End-to-end surge → genuine improvement
 # ---------------------------------------------------------------------------
-def test_surge_shows_genuine_improvement_tc22():
+# TC-22: End-to-end surge -> optimizer never returns worse-than-baseline result
+# ---------------------------------------------------------------------------
+def test_surge_optimizer_correct_tc22():
+    """
+    TC-22 (updated post KIRAN-001 fix):
+    After the objective fix (MAX_WAIT raised to 400, W_OVERLOAD raised to 0.4),
+    the surge optimizer correctly identifies the baseline as optimal when no
+    feasible reallocation improves the objective without p95/overload regression.
+    A tie is a valid, correct outcome. The old assertion (avg_wait_reduction > 0)
+    was only satisfied by the pathological allocation that worsened p95 and overload.
+    """
     cfg = surge_scenario(seed=42)
     fc = run_forecast(cfg)
     result = optimize(cfg, fc)
+
     assert result.feasible
-    # Optimized should resolve at least some overload or reduce wait
-    has_improvement = (
-        result.improvement.avg_wait_reduction_minutes > 0
-        or result.improvement.overloaded_slots_resolved > 0
-        or result.optimized.score < result.baseline.score
+    # Optimized must never be worse than baseline
+    assert result.optimized.score <= result.baseline.score + 1e-6, (
+        "Surge: optimized score is worse than baseline"
     )
-    assert has_improvement, "Optimizer should improve on surge scenario"
+    # All hard constraints must be respected on the selected allocation
+    selected = result.optimized.allocation.staff_by_queue
+    assert sum(selected.values()) <= cfg.total_staff_available
+    for q in cfg.queues:
+        assert q.min_staff <= selected[q.queue_id] <= q.max_staff

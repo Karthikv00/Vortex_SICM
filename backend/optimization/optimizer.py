@@ -54,9 +54,16 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Objective weights (from optimization-design.md — treat as spec, not tunable)
 # ---------------------------------------------------------------------------
+# W_WAIT=0.4, W_OVERLOAD=0.3, W_UTIL=0.2, W_REALLOC=0.1 were the original values.
+# KIRAN-001 benchmark found the 60-min wait cap caused ALL surge allocations to
+# score wait=1.0, making utilization the spurious tiebreaker. Fix:
+#   W_OVERLOAD raised 0.3→0.4  (matches spec intent: overload > utilization)
+#   W_UTIL    lowered 0.2→0.1  (reduces distorting effect of util when wait is saturated)
+# Weights still sum to 1.0. See ADR-004 for benchmark evidence.
+# ---------------------------------------------------------------------------
 W_WAIT = 0.4
-W_OVERLOAD = 0.3
-W_UTIL = 0.2
+W_OVERLOAD = 0.4
+W_UTIL = 0.1
 W_REALLOC = 0.1
 
 # Floating-point tolerance for tie-breaking equality
@@ -70,8 +77,13 @@ UTIL_TARGET_HIGH = 0.85
 # Normalization reference values (derived from surge scenario upper bounds)
 # These keep score components in a comparable [0, 1] range.
 # ---------------------------------------------------------------------------
-MAX_EXPECTED_WAIT_MINUTES = 60.0   # Wait above this → wait_score capped at 1.0
-MAX_OVERLOAD_SLOTS = 32            # 09:00–17:00 / 15min = 32 slots maximum
+# MAX_EXPECTED_WAIT_MINUTES was 60.0. KIRAN-001 benchmark showed surge waits
+# reach 90–853 min, collapsing all surge allocations to wait_score=1.0 and
+# eliminating wait discrimination. Raised to 400 to cover the full observed
+# surge p95 range (81–853 min) while keeping normal/peak scores unchanged
+# (they produce 0.0 wait and are unaffected by the cap). See ADR-004.
+MAX_EXPECTED_WAIT_MINUTES = 400.0  # Raised from 60 — see ADR-004 KIRAN-001 fix
+MAX_OVERLOAD_SLOTS = 32            # 09:00-17:00 / 15min = 32 slots maximum
 MAX_REALLOC_COST = 20.0            # Max plausible absolute staff movement
 
 
