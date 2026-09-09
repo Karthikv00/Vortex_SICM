@@ -21,7 +21,61 @@ from __future__ import annotations
 from typing import Dict, List
 
 from backend.models import ForecastResult, ScenarioConfig
-from data.generator import generate
+from data.generator import generate, generate_slot_labels
+
+
+# ---------------------------------------------------------------------------
+# Domain forecast validation
+# ---------------------------------------------------------------------------
+class ForecastValidationError(ValueError):
+    """Raised when a ForecastResult is incompatible with a ScenarioConfig."""
+
+    def __init__(self, error: str, message: str, field: str) -> None:
+        super().__init__(message)
+        self.error = error
+        self.message = message
+        self.field = field
+
+
+def validate_forecast(scenario: ScenarioConfig, forecast: ForecastResult) -> None:
+    """
+    Validate that a ForecastResult matches a ScenarioConfig's specifications.
+
+    Raises ForecastValidationError (a ValueError) on any discrepancy.
+    """
+    scenario_ids = scenario.queue_ids()
+    if len(set(scenario_ids)) != len(scenario_ids):
+        raise ForecastValidationError(
+            "invalid_scenario",
+            "scenario queue_id values must be unique",
+            "scenario.queues",
+        )
+    if forecast.scenario_name != scenario.scenario_name:
+        raise ForecastValidationError(
+            "scenario_mismatch",
+            "forecast.scenario_name must match scenario.scenario_name",
+            "forecast.scenario_name",
+        )
+
+    expected_slots = generate_slot_labels(scenario)
+    if forecast.slots != expected_slots:
+        raise ForecastValidationError(
+            "forecast_horizon_mismatch",
+            "forecast.slots must match the scenario horizon and slot_minutes",
+            "forecast.slots",
+        )
+    if set(forecast.expected_arrivals) != set(scenario_ids):
+        raise ForecastValidationError(
+            "forecast_queue_mismatch",
+            "forecast queue IDs must exactly match scenario queue IDs",
+            "forecast.expected_arrivals",
+        )
+    if any(value < 0 for arrivals in forecast.expected_arrivals.values() for value in arrivals):
+        raise ForecastValidationError(
+            "invalid_forecast",
+            "forecast arrival counts must be non-negative",
+            "forecast.expected_arrivals",
+        )
 
 
 # ---------------------------------------------------------------------------

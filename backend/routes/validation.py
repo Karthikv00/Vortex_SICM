@@ -6,8 +6,11 @@ from typing import Dict, Literal
 from fastapi import HTTPException
 from pydantic import BaseModel
 
+from backend.forecasting.forecast import (
+    ForecastValidationError,
+    validate_forecast as domain_validate_forecast,
+)
 from backend.models import AllocationPlan, ForecastResult, ScenarioConfig
-from data.generator import generate_slot_labels
 
 
 class AllocationInput(BaseModel):
@@ -21,35 +24,10 @@ class AllocationInput(BaseModel):
 
 
 def validate_forecast(scenario: ScenarioConfig, forecast: ForecastResult) -> None:
-    scenario_ids = scenario.queue_ids()
-    if len(set(scenario_ids)) != len(scenario_ids):
-        _invalid("invalid_scenario", "scenario queue_id values must be unique", "scenario.queues")
-    if forecast.scenario_name != scenario.scenario_name:
-        _invalid(
-            "scenario_mismatch",
-            "forecast.scenario_name must match scenario.scenario_name",
-            "forecast.scenario_name",
-        )
-
-    expected_slots = generate_slot_labels(scenario)
-    if forecast.slots != expected_slots:
-        _invalid(
-            "forecast_horizon_mismatch",
-            "forecast.slots must match the scenario horizon and slot_minutes",
-            "forecast.slots",
-        )
-    if set(forecast.expected_arrivals) != set(scenario_ids):
-        _invalid(
-            "forecast_queue_mismatch",
-            "forecast queue IDs must exactly match scenario queue IDs",
-            "forecast.expected_arrivals",
-        )
-    if any(value < 0 for arrivals in forecast.expected_arrivals.values() for value in arrivals):
-        _invalid(
-            "invalid_forecast",
-            "forecast arrival counts must be non-negative",
-            "forecast.expected_arrivals",
-        )
+    try:
+        domain_validate_forecast(scenario, forecast)
+    except ForecastValidationError as e:
+        _invalid(e.error, e.message, e.field)
 
 
 def validate_allocation(
