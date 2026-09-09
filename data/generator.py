@@ -89,7 +89,7 @@ def _surge_shape_boost(slot_index: int, total_slots: int) -> float:
     return 0.0
 
 
-def generate_arrivals(scenario: ScenarioConfig) -> Dict[str, List[int]]:
+def generate_arrivals(scenario: ScenarioConfig | dict) -> Dict[str, List[int]]:
     """
     Generate synthetic customer arrival counts per queue per time slot.
 
@@ -98,6 +98,9 @@ def generate_arrivals(scenario: ScenarioConfig) -> Dict[str, List[int]]:
 
     Deterministic for a given (scenario_name, seed).
     """
+    if isinstance(scenario, dict):
+        scenario = ScenarioConfig(**scenario)
+
     rng = random.Random(scenario.seed)
     total_slots = scenario.slot_count()
     multiplier = _SCENARIO_MULTIPLIERS.get(scenario.scenario_name, 1.0)
@@ -127,13 +130,16 @@ def generate_arrivals(scenario: ScenarioConfig) -> Dict[str, List[int]]:
     return arrivals
 
 
-def generate_slot_labels(scenario: ScenarioConfig) -> List[str]:
+def generate_slot_labels(scenario: ScenarioConfig | dict) -> List[str]:
     """
     Return time-slot labels as 'HH:MM' strings covering the full horizon.
 
     Example for 09:00–17:00 with 15-min slots:
     ['09:00', '09:15', '09:30', ..., '16:45']
     """
+    if isinstance(scenario, dict):
+        scenario = ScenarioConfig(**scenario)
+
     start_h, start_m = map(int, scenario.horizon_start.split(":"))
     start_total = start_h * 60 + start_m
 
@@ -145,7 +151,7 @@ def generate_slot_labels(scenario: ScenarioConfig) -> List[str]:
     return labels
 
 
-def generate(scenario: ScenarioConfig) -> ForecastResult:
+def generate(scenario: ScenarioConfig | dict) -> ForecastResult:
     """
     Generate a ForecastResult (raw arrivals, no smoothing) for a scenario.
 
@@ -155,6 +161,9 @@ def generate(scenario: ScenarioConfig) -> ForecastResult:
 
     Satisfies FR-DATA-1, FR-DATA-2, FR-DATA-3, FR-DATA-4.
     """
+    if isinstance(scenario, dict):
+        scenario = ScenarioConfig(**scenario)
+
     slots = generate_slot_labels(scenario)
     arrivals = generate_arrivals(scenario)
 
