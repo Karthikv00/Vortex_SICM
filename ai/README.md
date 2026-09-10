@@ -1,15 +1,7 @@
-# AI / ML
+# AI
 
-Put model integration, prompts, inference code, evaluation notes, and AI-related utilities here.
+This directory is reserved for AI-related project assets and supporting material.
 
-Possible approaches:
-- LLM API
-- Hugging Face model
-- scikit-learn
-- computer vision
-- NLP
-- RAG
-- rule-based logic
-- other suitable approach
+The production decision logic in Vortex SICM is deterministic and lives in the backend simulation, optimization, and explanation modules. AI-assisted development is governed by `AI_INSTRUCTIONS.md`; this directory is not the source of truth for application behavior.
 
-Do not add AI just because it is available. Use it when it solves a real requirement.
+Keep only project assets that are actually consumed by the application or required for documented development workflows.
