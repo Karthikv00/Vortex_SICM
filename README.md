@@ -1,214 +1,125 @@
-# Vortex SICM — AAVISHKARA-26 · JP-012
+# Vortex SICM
 
-**Bank Branch Operations Decision-Support Dashboard**
+**Bank Branch Operations Decision-Support System**
 
-> A decision-support system that predicts customer demand, simulates multiple service queues, evaluates staffing, and recommends feasible resource allocation to reduce waiting time.
+Vortex SICM helps a branch operations manager decide how to allocate limited staff across multiple service queues. It combines synthetic demand generation, time-slot demand forecasting, queue simulation, feasible resource optimization, baseline comparison, explainable recommendations, stress testing, and what-if analysis.
 
-## Purpose
-
-Vortex SICM helps a **bank branch operations manager** answer a practical operational question:
-
-> **Given expected customer demand and limited staff, where should staff be allocated to keep queues under control and reduce waiting time?**
-
-The application turns synthetic branch-demand scenarios into an explainable operational recommendation:
+## What the system does
 
 ```text
-Synthetic arrival/service data
+Scenario / custom workload
         ↓
-Demand forecast by time slot
+Demand forecast
         ↓
-Multiple-queue simulation
+Multi-queue simulation
         ↓
-Baseline staffing allocation
+Baseline allocation
         ↓
-Feasible resource optimization
+Feasible optimization
         ↓
 Baseline vs optimized comparison
         ↓
 Explainable recommendation
         ↓
-What-if simulation
+What-if / stress testing
 ```
 
-The product is **not** an autonomous agent and is **not** just a queue simulator. The deterministic simulation and optimization layer is the source of truth; the dashboard presents the resulting operational evidence to a human decision-maker.
+The deterministic simulation and optimization layer is the source of truth. The frontend is a decision-support interface for a human operator; the system does not autonomously operate a bank branch.
 
-## JP-012 requirements covered
+## Current application scope
 
-The MVP is designed around the official JP-012 outcomes:
+- Multiple queues for teller, loan, and customer-service workloads
+- Built-in synthetic scenarios for normal, peak, and surge demand
+- Custom workload input with automatic scenario/task classification
+- Demand forecasting by queue and time slot
+- Waiting-time and overload estimation
+- Resource-constrained staff allocation
+- Baseline-versus-optimized comparison
+- Deterministic recommendation explanations
+- What-if allocation analysis
+- Branch stress testing and resilience analysis
+- Scenario history and operational metrics
+- FastAPI backend + React/Vite frontend
+- Vercel-compatible frontend deployment configuration
 
-- Multiple service queues
-- Waiting-time estimation
-- Demand prediction by time slot
-- Staff/resource allocation
-- Overload identification
-- Comparison with a basic allocation strategy
-- Respect for resource limits
-- Explainable recommendation logic
-- Peak-load demonstration
+All demonstration/customer data is synthetic. No real customer or bank data is required.
 
-All scenario data used by the project is synthetic or generated for the hackathon. No real bank/customer data is required.
+## Repository layout
 
-## Current implementation
+```text
+Vortex_SICM/
+├── backend/       FastAPI API, domain models, forecasting, simulation, optimization
+├── data/          Synthetic data generation and predefined scenarios
+├── database/      SQL schema and persistence-related database assets
+├── frontend/      React/Vite operations dashboard
+├── docs/          Requirements, architecture, design, testing, execution, decisions
+├── scripts/       Development/benchmark utilities
+├── tests/         Backend and integration test suite
+├── infra/         Local infrastructure configuration
+├── AGENTS.md      Repository coding-agent rules
+├── AI_INSTRUCTIONS.md
+├── requirements.txt
+├── pytest.ini
+└── vercel.json
+```
 
-The repository currently contains the shared Python/FastAPI backend foundation and the core data, forecasting, simulation, optimization, API, and test modules. The remaining work is to validate the integrated behavior, complete frontend integration, and harden the end-to-end demo path.
+## Run locally
 
-Do not assume a feature is complete from its file existing alone. Use the task board, tests, current implementation, and actual execution results to determine completion.
-
-## Quick setup
+### Backend
 
 ```bash
-# 1. Clone
-git clone https://github.com/Kiran-official/Vortex_SICM.git
-cd Vortex_SICM
-
-# 2. Create virtual environment
 python -m venv .venv
 
 # Windows
-.venv\Scripts\activate
+.venv\\Scripts\\activate
 
-# Mac/Linux
+# macOS/Linux
 source .venv/bin/activate
 
-# 3. Install dependencies
 pip install -r requirements.txt
-
-# 4. Run the backend
 uvicorn backend.main:app --reload --port 8000
-
-# 5. Verify it works
-# Open http://localhost:8000/api/health → {"status":"ok"}
-# Open http://localhost:8000/docs      → Swagger UI
 ```
 
-## Run tests
+Backend endpoints are available under `/api`; health check: `GET /api/health`. Swagger UI is available at `/docs`.
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The frontend uses the API service layer in `frontend/src/services/api.js`. Configure the API base URL using the frontend environment configuration expected by the deployed build.
+
+## Tests
 
 ```bash
 pytest tests/ -v
 ```
 
-Only report tests as passing after actually running them.
-
-## Project structure
-
-```text
-Vortex_SICM/
-├── backend/
-│   ├── main.py                    # FastAPI application
-│   ├── models.py                  # Shared Pydantic contracts
-│   ├── simulation/
-│   │   └── engine.py              # Queue simulation (KARTHI-003)
-│   ├── forecasting/
-│   │   └── forecast.py            # Demand forecast (KARTHI-004)
-│   ├── optimization/
-│   │   ├── baseline.py            # Basic allocation baseline (KIRAN-004)
-│   │   ├── optimizer.py            # Feasible exhaustive optimizer (KIRAN-002)
-│   │   └── explain.py              # Deterministic explanation (KIRAN-003)
-│   └── routes/
-│       ├── scenario.py             # Scenario generation API
-│       ├── forecast.py             # Forecast API
-│       ├── simulation.py           # Simulation/what-if APIs
-│       ├── optimization.py         # Optimization API
-│       ├── explanation.py          # Recommendation explanation API
-│       └── validation.py           # Centralized API contract validation
-├── data/
-│   ├── generator.py               # Synthetic data
-│   └── scenarios.py               # Normal / Peak / Surge scenarios
-├── frontend/                      # Operations dashboard
-├── tests/                         # Unit/integration tests
-├── docs/                          # Requirements, architecture, execution, design, testing
-├── AGENTS.md                      # Coding-agent rules
-├── AI_INSTRUCTIONS.md             # AI coding-assistant rules
-├── requirements.txt
-└── .env.example
-```
-
-## API surface
-
-| Method | Endpoint | Purpose |
-|---|---|---|
-| GET | `/api/health` | Service liveness |
-| POST | `/api/scenario/generate` | Generate a deterministic synthetic scenario |
-| POST | `/api/forecast` | Forecast demand by queue and time slot |
-| POST | `/api/simulate` | Simulate an allocation |
-| POST | `/api/optimize` | Find the best feasible allocation |
-| POST | `/api/whatif` | Evaluate a manually selected allocation |
-| POST | `/api/explain` | Authoritative deterministic recommendation explanation |
-
-The binding API contract is documented in [`docs/architecture/api-contract.md`](docs/architecture/api-contract.md).
-
-## Team execution boundaries
-
-| Team member | Primary responsibility | Task IDs |
-|---|---|---|
-| Karthi | Data, forecasting, simulation, backend API | KARTHI-001–005 |
-| Kiran | Optimization, baseline, explainability, decision logic | KIRAN-001–004 |
-| Reethu | QA, edge cases, scenario validation, integration validation | REETHU-001–004 |
-| Deepansha | Dashboard, visualization, UX, frontend integration | DEEPANSHA-001–003 |
-
-Ownership is a coordination boundary, not permission to overwrite another teammate's work. Read `AGENTS.md` and the relevant task/spec before editing.
-
-## Development workflow
-
-Use a short-lived feature branch for each coherent task:
+Run the tests before claiming a change is complete. For frontend changes, also run the frontend build:
 
 ```bash
-git pull origin main
-git checkout -b <task-id>-<short-description>
-# implement + test
-git add -p
-git commit -m "[<TASK-ID>] <description>"
-git push origin <task-id>-<short-description>
+cd frontend
+npm run build
 ```
 
-Keep `main` demoable. Re-read shared files before changing them because teammates may be working concurrently.
+## Documentation
 
-## Competition timing
+Start with [`docs/README.md`](docs/README.md). It maps requirements, architecture, execution, design, testing, and decision records. The repository implementation is the source of truth for what is actually implemented; specifications describe intended behavior.
 
-The official rules define:
+## Development rules
 
-- Event: **9 Sep 2026, 10:00 AM → 10 Sep 2026, 2:00 PM**
-- Development begins: **9 Sep 2026, 1:30 PM**
-- Final submission/judging freeze: **10 Sep 2026, 7:00 AM**
-- Presentations: **10 Sep 2026, 9:00 AM–12:30 PM**
+- Keep `main` deployable and demoable.
+- Make focused changes; do not introduce unnecessary infrastructure.
+- Preserve API contracts unless the change explicitly requires one.
+- Test backend behavior and build the frontend after relevant changes.
+- Do not commit secrets, local environment files, generated dependencies, or empty placeholder files.
+- Read `AGENTS.md` and `AI_INSTRUCTIONS.md` before making substantial repository changes.
 
-The submitted state at 7:00 AM is the judging baseline. Do not plan on modifying the submitted version after the freeze.
+## Project
 
-## AI and competition integrity
-
-AI-assisted development, internet research, GitHub, external APIs/cloud services, and open-source libraries are permitted by the participant rules. AI-generated implementation must still be understood, tested, and owned by registered team members.
-
-Only registered team members may provide technical contributions. AI tools are not a substitute for an authorized human contributor.
-
-AI usage must be disclosed in the required event format. Keep an accurate record of the AI tools used, team members using them, purpose, and brief description.
-
-See:
-
-- `AGENTS.md` — coding-agent operating rules and competition guardrails
-- `AI_INSTRUCTIONS.md` — AI coding-assistant behavior and validation rules
-- `docs/engineering-rules.md` — team engineering workflow
-- `docs/README.md` — documentation map and authority model
-
-## Scope discipline
-
-P0 is the complete decision-support loop:
-
-```text
-Data → Forecast → Simulation → Allocation → Baseline Comparison
-→ Explainable Recommendation → What-If
-```
-
-Do not add authentication, complex microservices, real bank integrations, real customer data, unnecessary cloud infrastructure, deep-learning-heavy forecasting, or autonomous operational agents before the P0 path is stable.
-
-## Internal delivery targets
-
-| Time | Milestone |
-|---|---|
-| 05:30 AM | Feature freeze |
-| 06:00 AM | Final integration |
-| 06:15 AM | Clean-clone verification |
-| 06:30 AM | Final repository/PPT/deployment verification |
-| 06:45 AM | Submission readiness |
-| **07:00 AM** | **Official judging freeze** |
-
-For the complete requirements and acceptance criteria, use the documents under `docs/`.
+**Hackathon:** AAVISHKARA-26  
+**Problem:** JP-012 — Customer Arrival Queue Simulation & Resource Allocation Optimizer  
+**Team:** Vortex
