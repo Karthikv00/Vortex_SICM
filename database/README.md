@@ -1,5 +1,7 @@
 # Database
 
-Keep schema, migrations, seed scripts, and database notes here.
+Database assets for Vortex SICM.
 
-Choose the database only after the case study requirements are known.
+`schema.sql` contains the current SQL schema used to describe the persistence model. Runtime application behavior should be verified against the backend persistence implementation rather than inferred from this file alone.
+
+Do not commit credentials, local database files, dumps, or customer data.
