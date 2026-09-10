@@ -11,11 +11,30 @@ from __future__ import annotations
 
 import logging
 
+from pathlib import Path
+
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.routes import custom_workload, explanation, forecast, optimization, scenario, simulation
+# Load environment variables
+_root_env = Path(__file__).resolve().parent.parent / ".env"
+if _root_env.exists():
+    load_dotenv(dotenv_path=_root_env)
+else:
+    load_dotenv()
+
+from backend.routes import (
+    branches,
+    custom_workload,
+    explanation,
+    forecast,
+    optimization,
+    scenario,
+    simulation,
+    stress_test,
+)
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -78,6 +97,8 @@ app.include_router(simulation.router, prefix="/api", tags=["Simulation"])
 app.include_router(optimization.router, prefix="/api", tags=["Optimization"])
 app.include_router(explanation.router, prefix="/api", tags=["Explanation"])
 app.include_router(custom_workload.router, prefix="/api", tags=["Custom Workload"])
+app.include_router(branches.router, prefix="/api", tags=["Branches & Tasks"])
+app.include_router(stress_test.router, prefix="/api", tags=["Branch Stress Test & Scenarios"])
 
 
 # ---------------------------------------------------------------------------

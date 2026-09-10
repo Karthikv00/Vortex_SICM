@@ -13,6 +13,8 @@ import OptimizedAllocation from './components/optimization/OptimizedAllocation';
 import ComparisonMatrix from './components/optimization/ComparisonMatrix';
 import WhatIfSimulator from './components/optimization/WhatIfSimulator';
 import ExplanationPanel from './components/optimization/ExplanationPanel';
+import BranchStressTest from './components/optimization/BranchStressTest';
+import ScenarioHistory from './components/optimization/ScenarioHistory';
 import ErrorState from './components/common/ErrorState';
 import { DEFAULT_TASKS } from './utils/taskModel';
 import {
@@ -23,7 +25,9 @@ import {
   optimizeScenario,
   simulateWhatIf,
   analyzeCustomWorkload,
-  setApiMode
+  setApiMode,
+  fetchBranchTasks,
+  fetchPersistenceStatus
 } from './services/api';
 
 export default function App() {
@@ -53,6 +57,9 @@ export default function App() {
   const [whatIfLoading, setWhatIfLoading] = useState(false);
   const [error, setError] = useState(null);
   const [serverStatus, setServerStatus] = useState({ online: false, status: 'initializing' });
+  const [persistenceStatus, setPersistenceStatus] = useState({ connected: false, mode: 'checking' });
+  const [inspectedScenario, setInspectedScenario] = useState(null);
+  const [historyRefreshTrigger, setHistoryRefreshTrigger] = useState(0);
   const [isLiveApi, setIsLiveApi] = useState(true);
   const [activeNav, setActiveNav] = useState('command-center');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -74,6 +81,9 @@ export default function App() {
         setIsLiveApi(false);
         setApiMode(false);
       }
+    });
+    fetchPersistenceStatus().then(st => {
+      setPersistenceStatus(st);
     });
   }, []);
 
@@ -109,9 +119,18 @@ export default function App() {
     }
   }, []);
 
-  // Initial mount: analyze default tasks through the end-to-end pipeline
+  // Initial mount: load persisted tasks from database or analyze default tasks
   useEffect(() => {
-    handleAnalyzeCustomWorkload(DEFAULT_TASKS);
+    fetchBranchTasks('branch-main').then(savedTasks => {
+      if (savedTasks && savedTasks.length > 0) {
+        setCustomTasks(savedTasks);
+        handleAnalyzeCustomWorkload(savedTasks);
+      } else {
+        handleAnalyzeCustomWorkload(DEFAULT_TASKS);
+      }
+    }).catch(() => {
+      handleAnalyzeCustomWorkload(DEFAULT_TASKS);
+    });
   }, [handleAnalyzeCustomWorkload]);
 
   const handleCustomTasksChange = (nextTasks) => {
@@ -196,7 +215,9 @@ export default function App() {
       'demand-forecast': 'demand-forecast',
       optimization: 'optimized-allocation',
       simulation: 'simulation',
-      'what-if': 'what-if'
+      'what-if': 'what-if',
+      'stress-test': 'stress-test',
+      'scenario-history': 'scenario-history'
     };
     const el = document.getElementById(targetMap[navId]);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -211,8 +232,6 @@ export default function App() {
       <Sidebar
         activeNav={activeNav}
         onNavClick={handleNavClick}
-        serverStatus={serverStatus}
-        isLiveApi={isLiveApi}
       />
       {mobileSidebarOpen && (
         <div className="mobile-backdrop" onClick={() => setMobileSidebarOpen(false)} />
@@ -307,6 +326,18 @@ export default function App() {
             whatIfWorkloadLoading={whatIfWorkloadLoading}
             onApplyWhatIfToLive={handleApplyWhatIfToLive}
           />
+          <BranchStressTest
+            tasks={customTasks}
+            branchId="branch-main"
+            onScenarioSaved={() => setHistoryRefreshTrigger(prev => prev + 1)}
+            onInspectScenario={setInspectedScenario}
+            inspectedScenario={inspectedScenario}
+          />
+          <ScenarioHistory
+            branchId="branch-main"
+            onInspectScenario={setInspectedScenario}
+            refreshTrigger={historyRefreshTrigger}
+          />
         </main>
         <footer className="vortex-footer font-mono">
           <div className="footer-left">
@@ -318,6 +349,10 @@ export default function App() {
           </div>
           <div className="footer-right">
             <span className="footer-clock cyan">LOCAL TIME: {clock}</span>
+            <span className="footer-sep">/</span>
+            <span className={`footer-status ${persistenceStatus?.mode === 'supabase' ? 'green' : 'cyan'}`}>
+              PERSISTENCE: {persistenceStatus?.mode === 'supabase' ? 'SUPABASE CLOUD' : 'LOCAL STORE'}
+            </span>
             <span className="footer-sep">/</span>
             <span className={`footer-status ${serverStatus?.online ? 'green' : 'critical'}`}>
               SYS STATUS: {serverStatus?.online ? 'ONLINE' : 'LOCAL ENGINE'}
