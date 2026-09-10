@@ -1,49 +1,34 @@
-# Vortex_SICM Documentation
+# Vortex SICM Documentation
 
-**Hackathon:** AAVISHKARA-26  
-**Problem:** JP-012 — Customer Arrival Queue Simulation & Resource Allocation Optimizer  
-**Domain:** Bank branch operations  
-**Language:** Python (backend/simulation/optimization/data); frontend uses the repository's selected web stack.
+This directory contains the project's requirements, architecture, design, execution, testing, and decision records.
 
-## Purpose
+## Start here
 
-Vortex SICM is an explainable bank-branch operations decision-support system. It forecasts synthetic customer demand, simulates multiple service queues, evaluates limited staffing, compares a basic allocation with an optimized feasible allocation, explains the recommendation, and supports what-if analysis.
-
-The primary P0 loop is:
-
-`data → demand forecast → queue simulation → resource allocation → baseline comparison → explainable recommendation → what-if result`
-
-## Documentation map
-
-- `requirements/` — PRD, functional requirements, non-functional requirements, acceptance criteria
-- `architecture/` — architecture, domain model, data model, simulation design, optimization design, API contract, TRD
-- `execution/` — phases, task board, dependency map, integration plan, definition of done, submission checklist
+- `requirements/` — PRD, functional/non-functional requirements, acceptance criteria
+- `architecture/` — system architecture, domain/data models, simulation and optimization design, API contract, TRD
 - `design/` — UX, dashboard specification, demo flow
+- `execution/` — phases, task board, dependencies, integration plan, project status, submission checklist
 - `testing/` — test strategy, test cases, validation checklist
-- `decisions/` — ADR-001 through ADR-004
-- `team/` — participant execution PRDs
+- `decisions/` — architecture and scope decision records
+- `team/` — team execution documents
 - `risk-register.md` — known risks and mitigations
-- `engineering-rules.md` — team engineering workflow and competition guardrails
-
-`AGENTS.md` is the repository-level coding-agent policy. `AI_INSTRUCTIONS.md` contains AI coding-assistant-specific operating rules. `.chatgpt/HACKATHON_CONTEXT.md` is ChatGPT-only orchestration state and is not a coding-requirements source.
+- `engineering-rules.md` — engineering workflow and repository guardrails
+- `demo-script.md` — concise demonstration flow
+- `release-audit.md` — release/readiness audit
 
 ## Authority model
 
-### Requirements authority
+1. Official AAVISHKARA-26 rules and JP-012 problem statement
+2. Explicit human team instructions
+3. `AGENTS.md` and `AI_INSTRUCTIONS.md` for repository/AI behavior
+4. Approved specifications in this directory
+5. ADRs and engineering inference
+6. Current source code and tests determine what is actually implemented
 
-1. Official AAVISHKARA-26 participant rules
-2. Official JP-012 problem statement
-3. Explicit human team instructions
-4. `AGENTS.md` / `AI_INSTRUCTIONS.md` for repository and AI-assistant behavior
-5. Approved project specifications under `docs/`
-6. ADRs and engineering inference
+Documentation describes intended behavior; the running code and test results determine implementation status. Do not mark functionality complete solely because a file or endpoint exists.
 
-### Implementation truth
+## Core product flow
 
-The current repository is the source of truth for **what is actually implemented**. Documentation is the source of truth for **what is required/intended**. Do not treat a file's existence as proof that its behavior is complete; verify through code execution and tests.
+`custom/built-in scenario → forecast → multi-queue simulation → baseline allocation → constrained optimization → comparison → explanation → what-if/stress test`
 
-## AI instruction boundary
-
-Do not place coding-agent operating rules only in this file or in the public README. Keep them in `AGENTS.md` and `AI_INSTRUCTIONS.md`, with competition/workflow rules also reflected in the appropriate engineering/decision documents.
-
-AI-assisted development is permitted by the event rules, but registered team members remain responsible for understanding, validating, testing, and presenting the resulting implementation. AI usage must be recorded for the required event disclosure.
+The product is a decision-support system for branch operations. The deterministic simulation and optimization layer remains the source of truth; AI-assisted development does not make the product an autonomous banking agent.
